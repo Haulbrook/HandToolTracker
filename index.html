@@ -173,6 +173,8 @@
             min-height: 36px;
             display: inline-flex;
             align-items: center;
+            -webkit-user-drag: element;
+            touch-action: none;
         }
 
         .draggable:hover {
@@ -563,6 +565,15 @@
         </div>
     </div>
 
+    <!-- iOS Drag Drop Polyfill -->
+    <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
+    <script>
+        // Enable iOS drag-drop polyfill
+        MobileDragDrop.polyfill({
+            dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
+        });
+    </script>
+    
     <script>
         // Tool inventory with quantities
         const toolInventory = {
@@ -786,6 +797,11 @@
             document.querySelectorAll('.draggable').forEach(element => {
                 element.addEventListener('dragstart', handleDragStart);
                 element.addEventListener('dragend', handleDragEnd);
+                
+                // Touch events for mobile/iPad
+                element.addEventListener('touchstart', handleTouchStart, {passive: false});
+                element.addEventListener('touchmove', handleTouchMove, {passive: false});
+                element.addEventListener('touchend', handleTouchEnd, {passive: false});
             });
         }
 
@@ -802,6 +818,124 @@
             if (e.target.classList.contains('draggable')) {
                 e.target.classList.remove('dragging');
             }
+        }
+
+        // Touch event handlers for iPad
+        let touchItem = null;
+        let touchOffset = {x: 0, y: 0};
+        let touchClone = null;
+
+        function handleTouchStart(e) {
+            if (!e.target.classList.contains('draggable') || e.target.classList.contains('stack-label')) {
+                return;
+            }
+            
+            touchItem = e.target;
+            draggedElement = e.target;
+            
+            const touch = e.touches[0];
+            const rect = e.target.getBoundingClientRect();
+            touchOffset.x = touch.clientX - rect.left;
+            touchOffset.y = touch.clientY - rect.top;
+            
+            // Create a clone for visual feedback
+            touchClone = e.target.cloneNode(true);
+            touchClone.style.position = 'fixed';
+            touchClone.style.zIndex = '9999';
+            touchClone.style.opacity = '0.5';
+            touchClone.style.pointerEvents = 'none';
+            touchClone.style.left = `${touch.clientX - touchOffset.x}px`;
+            touchClone.style.top = `${touch.clientY - touchOffset.y}px`;
+            document.body.appendChild(touchClone);
+            
+            e.target.classList.add('dragging');
+            e.preventDefault();
+        }
+
+        function handleTouchMove(e) {
+            if (!touchItem || !touchClone) return;
+            
+            const touch = e.touches[0];
+            touchClone.style.left = `${touch.clientX - touchOffset.x}px`;
+            touchClone.style.top = `${touch.clientY - touchOffset.y}px`;
+            
+            // Highlight drop zones under finger
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const dropZone = elementBelow?.closest('.drop-zone') || elementBelow?.closest('.resource-items');
+            
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            if (dropZone) {
+                dropZone.classList.add('drag-over');
+            }
+            
+            e.preventDefault();
+        }
+
+        function handleTouchEnd(e) {
+            if (!touchItem) return;
+            
+            const touch = e.changedTouches[0];
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            let dropZone = elementBelow?.closest('.drop-zone') || elementBelow?.closest('.resource-items');
+            
+            if (dropZone && draggedElement) {
+                dropZone.classList.remove('drag-over');
+                
+                // Handle the drop
+                if (dropZone.dataset.crew) {
+                    const time = new Date().toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    
+                    const wrapper = document.createElement('div');
+                    wrapper.style.width = '100%';
+                    wrapper.innerHTML = `
+                        <span class="return-btn" onclick="returnTool(this)">Return</span>
+                        ${draggedElement.textContent}
+                        <span class="checkout-time">${time}</span>
+                    `;
+                    
+                    draggedElement.classList.add('checked-out');
+                    draggedElement.style.display = 'none';
+                    draggedElement.dataset.checkoutTime = time;
+                    draggedElement.dataset.crew = dropZone.dataset.crew;
+                    
+                    wrapper.dataset.originalTool = draggedElement.dataset.toolName;
+                    wrapper.dataset.toolNumber = draggedElement.dataset.toolNumber;
+                    
+                    dropZone.appendChild(wrapper);
+                    
+                    const stack = draggedElement.closest('.tool-stack');
+                    if (stack) {
+                        updateStackCount(stack);
+                    }
+                }
+                else if (dropZone.id === 'brokenPool') {
+                    draggedElement.classList.add('broken');
+                    dropZone.appendChild(draggedElement);
+                }
+                else if (dropZone.classList.contains('resource-items')) {
+                    draggedElement.classList.remove('broken');
+                    dropZone.appendChild(draggedElement);
+                }
+                
+                updateLastModifiedTime();
+            }
+            
+            // Clean up
+            if (touchClone) {
+                touchClone.remove();
+                touchClone = null;
+            }
+            if (touchItem) {
+                touchItem.classList.remove('dragging');
+                touchItem = null;
+            }
+            draggedElement = null;
+            
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            e.preventDefault();
         }
 
         // Setup global drag events
