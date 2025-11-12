@@ -1,0 +1,375 @@
+/**
+ * Component Styles
+ * Reusable UI components
+ */
+
+/* Buttons */
+button {
+    padding: var(--space-lg) 18px;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    border: none;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    -webkit-appearance: none;
+    touch-action: manipulation;
+    min-height: var(--touch-target-min);
+    font-family: var(--font-family);
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-xl);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Button variants */
+.btn-save {
+    background: var(--color-success);
+    color: white;
+}
+
+.btn-clear {
+    background: var(--color-danger);
+    color: white;
+}
+
+.btn-print {
+    background: var(--color-info);
+    color: white;
+}
+
+.btn-add {
+    background: var(--color-accent);
+    color: white;
+}
+
+.btn-return-all {
+    background: var(--color-warning);
+    color: white;
+}
+
+.btn-expand {
+    background: #00b894;
+    color: white;
+}
+
+.btn-secondary {
+    background: var(--color-secondary);
+    color: white;
+}
+
+/* Draggable Tools */
+.draggable {
+    padding: var(--space-md) 12px;
+    border-radius: var(--radius-md);
+    cursor: move;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-normal);
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    -webkit-user-drag: element;
+    touch-action: none;
+}
+
+.draggable:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-sm);
+}
+
+.draggable:focus-visible {
+    outline: 2px solid var(--color-info);
+    outline-offset: 2px;
+    transform: scale(1.05);
+}
+
+.draggable.dragging {
+    opacity: var(--drag-opacity);
+}
+
+.draggable.broken {
+    opacity: 0.6;
+    background: repeating-linear-gradient(
+        45deg,
+        var(--color-broken-stripe-1),
+        var(--color-broken-stripe-1) 5px,
+        var(--color-broken-stripe-2) 5px,
+        var(--color-broken-stripe-2) 10px
+    ) !important;
+    color: white !important;
+}
+
+/* Tool Category Colors */
+.hammer { background: var(--color-hammer); color: white; }
+.screwdriver { background: var(--color-screwdriver); color: white; }
+.battery { background: var(--color-battery); color: #333; }
+.power-tool { background: var(--color-power-tool); color: white; }
+.measuring { background: var(--color-measuring); color: white; }
+.cutting { background: var(--color-cutting); color: white; }
+.pliers { background: var(--color-pliers); color: white; }
+.fastening { background: var(--color-fastening); color: white; }
+.safety { background: var(--color-safety); color: white; }
+.misc { background: var(--color-misc); color: white; }
+
+/* Tool Stack Styling */
+.tool-stack {
+    position: relative;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.tool-stack.expanded {
+    display: inline-block;
+}
+
+.tool-stack .stack-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+    pointer-events: none;
+}
+
+.tool-stack .tool-item {
+    display: none;
+    margin-right: var(--space-xs);
+    margin-bottom: var(--space-xs);
+}
+
+.tool-stack.expanded .tool-item {
+    display: inline-block;
+}
+
+.tool-stack.expanded .stack-label {
+    display: none;
+}
+
+/* Drop Zones */
+.drop-zone {
+    min-height: 35px;
+    padding: var(--space-sm);
+    background: var(--color-surface-alt);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-md);
+    transition: all var(--transition-fast);
+}
+
+.drop-zone.drag-over {
+    background: var(--drag-over-bg);
+    border-color: var(--drag-over-border);
+}
+
+.drop-zone .draggable {
+    margin-bottom: var(--space-xs);
+    display: block;
+}
+
+/* Broken Tool Pool */
+#brokenPool {
+    background: var(--color-broken-bg);
+    border-color: var(--color-broken-border);
+}
+
+/* Checkout Display */
+.checkout-item {
+    width: 100%;
+    position: relative;
+    padding: var(--space-md);
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-xs);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.checkout-time {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    margin-left: var(--space-sm);
+}
+
+.return-btn {
+    padding: 2px var(--space-sm);
+    background: var(--color-success-dark);
+    color: white;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: var(--font-size-xs);
+    border: none;
+    transition: all var(--transition-fast);
+    min-height: 24px;
+}
+
+.return-btn:hover {
+    background: var(--color-success);
+    transform: scale(1.05);
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: var(--z-modal);
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal[aria-hidden="false"] {
+    display: flex;
+}
+
+.modal-content {
+    background-color: var(--color-surface);
+    padding: var(--space-2xl);
+    border-radius: var(--radius-2xl);
+    width: 90%;
+    max-width: 400px;
+    box-shadow: var(--shadow-2xl);
+    position: relative;
+    animation: modalSlideIn var(--transition-medium);
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--space-2xl);
+    color: var(--color-text-primary);
+}
+
+.close {
+    position: absolute;
+    right: var(--space-xl);
+    top: var(--space-xl);
+    color: #aaa;
+    font-size: 28px;
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: auto;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+    transform: none;
+    box-shadow: none;
+}
+
+.form-group {
+    margin-bottom: var(--space-xl);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: var(--space-sm);
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-normal);
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: 2px solid var(--color-info);
+    outline-offset: 0;
+    border-color: var(--color-info);
+}
+
+.form-group input[type="number"] {
+    width: 80px;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: var(--space-lg);
+    justify-content: flex-end;
+    margin-top: var(--space-2xl);
+}
+
+.modal-buttons button {
+    padding: var(--space-md) var(--space-2xl);
+}
+
+/* Loading State */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Error State */
+.error-message {
+    background: #fee;
+    border: 1px solid var(--color-danger);
+    color: var(--color-danger);
+    padding: var(--space-lg);
+    border-radius: var(--radius-md);
+    margin: var(--space-lg) 0;
+}
+
+/* Success State */
+.success-message {
+    background: #efe;
+    border: 1px solid var(--color-success);
+    color: var(--color-success);
+    padding: var(--space-lg);
+    border-radius: var(--radius-md);
+    margin: var(--space-lg) 0;
+}

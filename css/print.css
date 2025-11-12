@@ -1,0 +1,69 @@
+/**
+ * Print Styles
+ * Optimized layout for printing
+ */
+
+@media print {
+    body {
+        background: white;
+        padding: 0;
+    }
+
+    .container {
+        box-shadow: none;
+        padding: var(--space-lg);
+    }
+
+    /* Hide interactive elements */
+    .resources-bar,
+    .action-buttons,
+    .return-btn,
+    .modal {
+        display: none !important;
+    }
+
+    /* Optimize crews layout for print */
+    .crews-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-2xl);
+    }
+
+    .crew-card {
+        flex: unset;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Ensure good contrast */
+    * {
+        color: black !important;
+        background: white !important;
+    }
+
+    .crew-header {
+        border: 2px solid black !important;
+        font-weight: var(--font-weight-bold);
+    }
+
+    .drop-zone,
+    .checkout-item {
+        border: 1px solid black !important;
+    }
+
+    /* Show tool info clearly */
+    .draggable {
+        border: 1px solid #666 !important;
+        margin: 2px !important;
+    }
+
+    .checkout-time {
+        color: #333 !important;
+    }
+
+    /* Page breaks */
+    h1, h2, h3 {
+        page-break-after: avoid;
+        break-after: avoid;
+    }
+}

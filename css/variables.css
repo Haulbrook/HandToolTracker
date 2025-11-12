@@ -1,0 +1,131 @@
+/**
+ * Design Tokens - CSS Variables
+ * Centralized design system for consistency
+ */
+
+:root {
+    /* Color Palette */
+    --color-primary: #2d3436;
+    --color-secondary: #636e72;
+    --color-accent: #9c88ff;
+
+    --color-success: #4CAF50;
+    --color-success-hover: #4cd137;
+    --color-success-dark: #218838;
+
+    --color-danger: #f44336;
+    --color-warning: #ff9800;
+    --color-info: #2196F3;
+
+    --color-background: #f0f2f5;
+    --color-surface: #ffffff;
+    --color-surface-alt: #f8f9fa;
+
+    --color-border: #dee2e6;
+    --color-border-dashed: #dee2e6;
+
+    --color-text-primary: #2d3436;
+    --color-text-secondary: #495057;
+    --color-text-muted: #6c757d;
+
+    /* Tool Category Colors */
+    --color-hammer: #e17055;
+    --color-screwdriver: #00b894;
+    --color-battery: #fdcb6e;
+    --color-power-tool: #6c5ce7;
+    --color-measuring: #0984e3;
+    --color-cutting: #d63031;
+    --color-pliers: #a29bfe;
+    --color-fastening: #00cec9;
+    --color-safety: #fd79a8;
+    --color-misc: #636e72;
+
+    /* Crew Colors */
+    --color-crew-1: #9c88ff;
+    --color-crew-2: #00a8ff;
+    --color-crew-3: #fbc531;
+    --color-crew-4: #4cd137;
+    --color-crew-5: #e84393;
+    --color-crew-6: #00d2d3;
+
+    /* Broken Tool Styling */
+    --color-broken-bg: #ffe0e0;
+    --color-broken-border: #ff9999;
+    --color-broken-stripe-1: #ff6b6b;
+    --color-broken-stripe-2: #ff9999;
+
+    /* Spacing Scale */
+    --space-xs: 4px;
+    --space-sm: 6px;
+    --space-md: 8px;
+    --space-lg: 10px;
+    --space-xl: 15px;
+    --space-2xl: 20px;
+
+    /* Border Radius */
+    --radius-sm: 3px;
+    --radius-md: 5px;
+    --radius-lg: 6px;
+    --radius-xl: 8px;
+    --radius-2xl: 10px;
+
+    /* Typography */
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-size-xs: 0.65em;
+    --font-size-sm: 0.75em;
+    --font-size-md: 0.85em;
+    --font-size-base: 0.95em;
+    --font-size-lg: 1em;
+    --font-size-xl: 1.3em;
+    --font-size-2xl: 1.8em;
+
+    --font-weight-normal: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: bold;
+
+    /* Shadows */
+    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.15);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 2px 10px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --shadow-2xl: 0 5px 20px rgba(0, 0, 0, 0.3);
+
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-medium: 0.3s ease;
+
+    /* Z-Index Scale */
+    --z-base: 1;
+    --z-dropdown: 100;
+    --z-modal: 1000;
+    --z-drag-clone: 9999;
+
+    /* Layout */
+    --container-min-width: 320px;
+    --container-max-width: 1600px;
+    --crew-card-width: 190px;
+
+    /* Touch Targets */
+    --touch-target-min: 44px;
+
+    /* Drag & Drop */
+    --drag-opacity: 0.5;
+    --drag-over-bg: #e3f2fd;
+    --drag-over-border: #2196F3;
+}
+
+/* Media Query Breakpoints */
+@media (max-width: 768px) {
+    :root {
+        --container-min-width: 100%;
+        --crew-card-width: 160px;
+        --font-size-2xl: 1.5em;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --transition-fast: 0s;
+        --transition-medium: 0s;
+    }
+}
