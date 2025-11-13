@@ -5,8 +5,8 @@
 
 /* Buttons */
 button {
-    padding: var(--space-lg) 18px;
-    font-size: var(--font-size-base);
+    padding: 8px 14px;
+    font-size: 0.85em;
     font-weight: var(--font-weight-semibold);
     border: none;
     border-radius: var(--radius-lg);
@@ -14,7 +14,7 @@ button {
     transition: all var(--transition-fast);
     -webkit-appearance: none;
     touch-action: manipulation;
-    min-height: var(--touch-target-min);
+    min-height: 36px;
     font-family: var(--font-family);
 }
 
@@ -63,6 +63,21 @@ button:disabled {
     color: white;
 }
 
+.btn-save-history {
+    background: #6c5ce7;
+    color: white;
+}
+
+.btn-load-yesterday {
+    background: #fd79a8;
+    color: white;
+}
+
+.btn-view-history {
+    background: #00cec9;
+    color: white;
+}
+
 .btn-secondary {
     background: var(--color-secondary);
     color: white;
@@ -70,10 +85,10 @@ button:disabled {
 
 /* Draggable Tools */
 .draggable {
-    padding: var(--space-md) 12px;
+    padding: 6px 10px;
     border-radius: var(--radius-md);
     cursor: move;
-    font-size: var(--font-size-md);
+    font-size: 0.8em;
     font-weight: var(--font-weight-normal);
     transition: all var(--transition-fast);
     white-space: nowrap;
@@ -81,7 +96,7 @@ button:disabled {
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
-    min-height: 36px;
+    min-height: 28px;
     display: inline-flex;
     align-items: center;
     -webkit-user-drag: element;
@@ -141,17 +156,17 @@ button:disabled {
 
 .tool-stack .stack-count {
     position: absolute;
-    top: -5px;
-    right: -5px;
+    top: -4px;
+    right: -4px;
     background: var(--color-primary);
     color: white;
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--font-size-sm);
+    font-size: 0.7em;
     font-weight: var(--font-weight-bold);
     pointer-events: none;
 }
@@ -166,14 +181,20 @@ button:disabled {
     display: inline-flex !important;
 }
 
+/* Never show checked-out tools, even in expanded stacks */
+.tool-stack .tool-item.checked-out,
+.tool-stack.expanded .tool-item.checked-out {
+    display: none !important;
+}
+
 .tool-stack.expanded .stack-label {
     display: none !important;
 }
 
 /* Drop Zones */
 .drop-zone {
-    min-height: 35px;
-    padding: var(--space-sm);
+    min-height: 30px;
+    padding: 5px;
     background: var(--color-surface-alt);
     border: 2px dashed var(--color-border);
     border-radius: var(--radius-md);
@@ -201,13 +222,14 @@ button:disabled {
 .checkout-item {
     width: 100%;
     position: relative;
-    padding: var(--space-md);
+    padding: 6px;
     background: var(--color-surface-alt);
     border-radius: var(--radius-md);
     margin-bottom: var(--space-xs);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    font-size: 0.85em;
 }
 
 .checkout-time {

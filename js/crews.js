@@ -4,7 +4,7 @@
  */
 
 import { createElement, getById, clearElement, announceToScreenReader } from './dom.js';
-import { returnTool } from './tools.js';
+import { returnTool, updateStackCount } from './tools.js';
 import CONFIG from './config.js';
 
 /**
@@ -169,10 +169,23 @@ export function handleReturnTool(returnBtn) {
  * Check out a tool to a crew
  */
 export function checkoutTool(toolElement, dropZone) {
-    if (!toolElement || !dropZone) return false;
+    if (!toolElement || !dropZone) {
+        console.error('checkoutTool: Missing toolElement or dropZone', { toolElement, dropZone });
+        return false;
+    }
 
     const crewNumber = dropZone.dataset.crew;
-    if (!crewNumber) return false;
+    if (!crewNumber) {
+        console.error('checkoutTool: No crew number on dropZone', dropZone);
+        return false;
+    }
+
+    console.log('checkoutTool: Starting checkout', {
+        tool: toolElement.dataset.toolName,
+        number: toolElement.dataset.toolNumber,
+        crew: crewNumber,
+        dropZone: dropZone
+    });
 
     const time = new Date().toLocaleTimeString('en-US', CONFIG.TIME_FORMAT);
 
@@ -184,6 +197,8 @@ export function checkoutTool(toolElement, dropZone) {
         crewNumber
     );
 
+    console.log('checkoutTool: Created checkout item', checkoutItem);
+
     // Hide original tool
     toolElement.classList.add('checked-out');
     toolElement.style.display = 'none';
@@ -191,8 +206,12 @@ export function checkoutTool(toolElement, dropZone) {
     toolElement.dataset.crew = crewNumber;
     toolElement.setAttribute('aria-grabbed', 'true');
 
+    console.log('checkoutTool: Hidden original tool');
+
     // Add to drop zone
     dropZone.appendChild(checkoutItem);
+
+    console.log('checkoutTool: Appended to dropZone, dropZone now has', dropZone.children.length, 'children');
 
     announceToScreenReader(
         `${toolElement.dataset.toolName} number ${toolElement.dataset.toolNumber} checked out to Crew ${crewNumber}`
@@ -278,7 +297,6 @@ export function loadCheckouts(checkoutsData) {
                 // Update stack count if part of a stack
                 const stack = originalTool.closest('.tool-stack');
                 if (stack) {
-                    const { updateStackCount } = require('./tools.js');
                     updateStackCount(stack);
                 }
 

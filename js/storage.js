@@ -233,6 +233,158 @@ class Storage {
             return { available: true, error: error.message };
         }
     }
+
+    /**
+     * Save schedule to history with specific date
+     * @param {Object} scheduleData
+     * @param {string} dateKey - Optional date key (YYYY-MM-DD), defaults to today
+     * @returns {boolean}
+     */
+    saveToHistory(scheduleData, dateKey = null) {
+        const key = dateKey || this.getDateKey();
+        const historyKey = `toolHistory_${key}`;
+
+        const historyEntry = {
+            ...scheduleData,
+            savedAt: new Date().toISOString(),
+            dateKey: key
+        };
+
+        const success = this.setItem(historyKey, historyEntry);
+
+        if (success) {
+            // Update history index
+            this.updateHistoryIndex(key);
+        }
+
+        return success;
+    }
+
+    /**
+     * Get date key in YYYY-MM-DD format
+     * @param {Date} date - Optional date object, defaults to today
+     * @returns {string}
+     */
+    getDateKey(date = null) {
+        const d = date || new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    /**
+     * Get yesterday's date key
+     * @returns {string}
+     */
+    getYesterdayKey() {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        return this.getDateKey(yesterday);
+    }
+
+    /**
+     * Update history index with new date
+     * @param {string} dateKey
+     */
+    updateHistoryIndex(dateKey) {
+        const index = this.getItem('toolHistoryIndex', []);
+        if (!index.includes(dateKey)) {
+            index.unshift(dateKey); // Add to beginning
+            // Keep only last 90 days of history
+            if (index.length > 90) {
+                const removed = index.splice(90);
+                // Clean up old entries
+                removed.forEach(key => {
+                    this.removeItem(`toolHistory_${key}`);
+                });
+            }
+            this.setItem('toolHistoryIndex', index);
+        }
+    }
+
+    /**
+     * Get all history dates
+     * @returns {Array<string>} Array of date keys (YYYY-MM-DD)
+     */
+    getHistoryDates() {
+        return this.getItem('toolHistoryIndex', []);
+    }
+
+    /**
+     * Load schedule from history by date
+     * @param {string} dateKey - Date key (YYYY-MM-DD)
+     * @returns {Object|null}
+     */
+    loadFromHistory(dateKey) {
+        const historyKey = `toolHistory_${dateKey}`;
+        return this.getItem(historyKey);
+    }
+
+    /**
+     * Load yesterday's schedule
+     * @returns {Object|null}
+     */
+    loadYesterday() {
+        const yesterdayKey = this.getYesterdayKey();
+        return this.loadFromHistory(yesterdayKey);
+    }
+
+    /**
+     * Get formatted date string from date key
+     * @param {string} dateKey - Date key (YYYY-MM-DD)
+     * @returns {string}
+     */
+    formatDateKey(dateKey) {
+        const [year, month, day] = dateKey.split('-');
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+
+    /**
+     * Delete a history entry
+     * @param {string} dateKey
+     * @returns {boolean}
+     */
+    deleteHistoryEntry(dateKey) {
+        const historyKey = `toolHistory_${dateKey}`;
+        const success = this.removeItem(historyKey);
+
+        if (success) {
+            // Remove from index
+            const index = this.getItem('toolHistoryIndex', []);
+            const newIndex = index.filter(key => key !== dateKey);
+            this.setItem('toolHistoryIndex', newIndex);
+        }
+
+        return success;
+    }
+
+    /**
+     * Get history summary
+     * @returns {Array} Array of {dateKey, date, toolCount, crewCount}
+     */
+    getHistorySummary() {
+        const dates = this.getHistoryDates();
+        return dates.map(dateKey => {
+            const entry = this.loadFromHistory(dateKey);
+            if (!entry) return null;
+
+            return {
+                dateKey,
+                formattedDate: this.formatDateKey(dateKey),
+                savedAt: entry.savedAt,
+                toolCount: entry.checkouts?.reduce((sum, crew) => sum + crew.tools.length, 0) || 0,
+                crewCount: entry.checkouts?.length || 0,
+                brokenCount: entry.broken?.length || 0
+            };
+        }).filter(Boolean);
+    }
 }
 
 // Create singleton instance
