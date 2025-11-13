@@ -6,6 +6,7 @@
 import { querySelectorAll, addClass, removeClass } from './dom.js';
 import { checkoutTool, markToolBroken, unmarkToolBroken } from './crews.js';
 import { updateStackCount } from './tools.js';
+import { updateLastModifiedTime } from './ui.js';
 import appState from './state.js';
 
 // Touch state
@@ -247,21 +248,30 @@ function setupGlobalDropEvents() {
 function handleDrop(draggedElement, dropZone) {
     if (!draggedElement || !dropZone) return;
 
+    console.log('Drop detected:', {
+        tool: draggedElement.dataset.toolName,
+        targetZone: dropZone.id || dropZone.className,
+        crew: dropZone.dataset.crew
+    });
+
     // Check out to a crew
     if (dropZone.dataset.crew) {
         const success = checkoutTool(draggedElement, dropZone);
 
         if (success) {
+            console.log('Tool checked out successfully');
             // Update stack count if part of a stack
             const stack = draggedElement.closest('.tool-stack');
             if (stack) {
                 updateStackCount(stack);
             }
+            updateLastModifiedTime();
         }
     }
     // Move to broken pool
     else if (dropZone.id === 'brokenPool') {
         markToolBroken(draggedElement);
+        updateLastModifiedTime();
     }
     // Return to a resource pool
     else if (dropZone.classList.contains('resource-items')) {
@@ -277,6 +287,7 @@ function handleDrop(draggedElement, dropZone) {
         if (stack) {
             updateStackCount(stack);
         }
+        updateLastModifiedTime();
     }
 }
 

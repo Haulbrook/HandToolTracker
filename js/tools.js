@@ -94,8 +94,10 @@ export function createToolStack(tool, poolId) {
 
         // Toggle stack expansion
         const toggleStack = (e) => {
-            if (e.target.closest('.tool-item')) {
-                return; // Don't toggle if clicking on a tool item
+            // Don't toggle if clicking on an individual tool item
+            if (e.target.classList.contains('tool-item') || e.target.closest('.tool-item')) {
+                console.log('Clicked on tool item, not toggling stack');
+                return;
             }
 
             e.preventDefault();
@@ -103,6 +105,8 @@ export function createToolStack(tool, poolId) {
 
             const isExpanded = stackDiv.classList.toggle('expanded');
             appState.toggleStack(tool.name);
+
+            console.log(`Stack "${tool.name}" ${isExpanded ? 'expanded' : 'collapsed'}, showing ${tool.qty} items`);
 
             // Update ARIA
             stackDiv.setAttribute('aria-label',

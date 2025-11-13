@@ -157,17 +157,17 @@ button:disabled {
 }
 
 .tool-stack .tool-item {
-    display: none;
+    display: none !important;
     margin-right: var(--space-xs);
     margin-bottom: var(--space-xs);
 }
 
 .tool-stack.expanded .tool-item {
-    display: inline-block;
+    display: inline-flex !important;
 }
 
 .tool-stack.expanded .stack-label {
-    display: none;
+    display: none !important;
 }
 
 /* Drop Zones */
