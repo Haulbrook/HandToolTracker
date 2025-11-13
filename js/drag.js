@@ -14,6 +14,9 @@ let touchItem = null;
 let touchOffset = { x: 0, y: 0 };
 let touchClone = null;
 
+// Track if global events have been set up (only do once)
+let globalEventsSetup = false;
+
 /**
  * Setup drag and drop events for all draggable elements
  */
@@ -34,8 +37,11 @@ export function setupDragEvents() {
         element.addEventListener('keydown', handleKeyDown);
     });
 
-    // Setup global drop events
-    setupGlobalDropEvents();
+    // Setup global drop events only once
+    if (!globalEventsSetup) {
+        setupGlobalDropEvents();
+        globalEventsSetup = true;
+    }
 }
 
 /**
@@ -305,6 +311,9 @@ export function removeDragEvents() {
         element.removeEventListener('touchend', handleTouchEnd);
         element.removeEventListener('keydown', handleKeyDown);
     });
+
+    // Note: We don't remove global events as they're document-level
+    // and should persist throughout the app lifecycle
 }
 
 export default {
