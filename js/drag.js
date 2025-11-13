@@ -17,6 +17,11 @@ let touchClone = null;
 // Track if global events have been set up (only do once)
 let globalEventsSetup = false;
 
+// Debounce duplicate drops (track last drop to prevent duplicates)
+let lastDropTime = 0;
+let lastDropTool = null;
+const DROP_DEBOUNCE_MS = 100;
+
 /**
  * Setup drag and drop events for all draggable elements
  */
@@ -254,14 +259,30 @@ function setupGlobalDropEvents() {
 function handleDrop(draggedElement, dropZone) {
     if (!draggedElement || !dropZone) return;
 
+    const now = new Date().getTime();
+    const toolId = `${draggedElement.dataset.toolName}-${draggedElement.dataset.toolNumber}`;
+
+    console.log('=== handleDrop called ===');
     console.log('Drop detected:', {
         tool: draggedElement.dataset.toolName,
         targetZone: dropZone.id || dropZone.className,
-        crew: dropZone.dataset.crew
+        crew: dropZone.dataset.crew,
+        timestamp: now
     });
+
+    // Debounce: prevent duplicate drops of the same tool within 100ms
+    // This handles cases where both touch and mouse events fire
+    if (now - lastDropTime < DROP_DEBOUNCE_MS && toolId === lastDropTool) {
+        console.log('PREVENTED DUPLICATE DROP - same tool within 100ms');
+        return;
+    }
+
+    lastDropTime = now;
+    lastDropTool = toolId;
 
     // Check out to a crew
     if (dropZone.dataset.crew) {
+        console.log('Calling checkoutTool...');
         const success = checkoutTool(draggedElement, dropZone);
 
         if (success) {
@@ -272,6 +293,8 @@ function handleDrop(draggedElement, dropZone) {
                 updateStackCount(stack);
             }
             updateLastModifiedTime();
+        } else {
+            console.log('checkoutTool returned false');
         }
     }
     // Move to broken pool
