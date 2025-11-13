@@ -1,0 +1,185 @@
+/**
+ * Layout Styles
+ * Page structure and responsive grid
+ */
+
+.container {
+    min-width: var(--container-min-width);
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+    background: var(--color-surface);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-2xl);
+    box-shadow: var(--shadow-lg);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-2xl);
+    padding-bottom: var(--space-xl);
+    border-bottom: 2px solid var(--color-border);
+    flex-wrap: wrap;
+    gap: var(--space-xl);
+}
+
+.header h1 {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-2xl);
+    margin: 0;
+}
+
+.header-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.date-header {
+    color: var(--color-secondary);
+    font-size: var(--font-size-lg);
+}
+
+.update-time {
+    background: #fff3cd;
+    color: #856404;
+    padding: var(--space-sm) var(--space-xl);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    border: 1px solid #ffc107;
+}
+
+.action-buttons {
+    display: flex;
+    gap: var(--space-lg);
+    flex-wrap: wrap;
+}
+
+/* Resources Bar - Tool Inventory Grid */
+.resources-bar {
+    background: var(--color-surface-alt);
+    padding: var(--space-xl);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--space-2xl);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-xl);
+}
+
+.resource-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.resource-section h3 {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-xs);
+}
+
+.resource-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    min-height: 70px;
+    padding: var(--space-md);
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    border: 2px dashed var(--color-border-dashed);
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+/* Crews Container */
+.section-heading {
+    margin: var(--space-2xl) 0 var(--space-xl);
+    color: var(--color-text-primary);
+}
+
+.crews-container {
+    display: flex;
+    gap: var(--space-xl);
+    overflow-x: auto;
+    padding-bottom: var(--space-lg);
+}
+
+.crew-card {
+    flex: 0 0 var(--crew-card-width);
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.crew-header {
+    padding: var(--space-lg);
+    color: white;
+    font-weight: var(--font-weight-bold);
+    text-align: center;
+    font-size: var(--font-size-lg);
+}
+
+/* Crew header colors */
+.crew-card[data-crew="1"] .crew-header { background: var(--color-crew-1); }
+.crew-card[data-crew="2"] .crew-header { background: var(--color-crew-2); }
+.crew-card[data-crew="3"] .crew-header { background: var(--color-crew-3); }
+.crew-card[data-crew="4"] .crew-header { background: var(--color-crew-4); }
+.crew-card[data-crew="5"] .crew-header { background: var(--color-crew-5); }
+.crew-card[data-crew="6"] .crew-header { background: var(--color-crew-6); }
+.crew-card[data-crew="7"] .crew-header { background: var(--color-crew-1); }
+.crew-card[data-crew="8"] .crew-header { background: var(--color-crew-2); }
+
+.crew-body {
+    padding: var(--space-lg);
+}
+
+.crew-section {
+    margin-bottom: var(--space-lg);
+}
+
+.crew-section-title {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-xs);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .resources-bar {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        min-width: 100%;
+        padding: var(--space-lg);
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .action-buttons {
+        justify-content: center;
+    }
+
+    .resources-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .crews-container {
+        flex-direction: column;
+    }
+
+    .crew-card {
+        flex: 1 0 auto;
+    }
+}
