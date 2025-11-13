@@ -200,33 +200,31 @@ class ToolTrackerApp {
                 return;
             }
 
-            // Ask user if they want to load
-            if (confirmDialog('Load today\'s saved tool checkouts?')) {
-                // Load inventory if saved
-                if (schedule.inventory) {
-                    appState.setInventory(schedule.inventory);
-                    initializeInventory();
-                }
-
-                // Recreate crews (they were just initialized)
-                createCrewCards();
-
-                // Load checkouts
-                if (schedule.checkouts && Array.isArray(schedule.checkouts)) {
-                    loadCheckouts(schedule.checkouts);
-                }
-
-                // Load broken tools
-                if (schedule.broken && Array.isArray(schedule.broken)) {
-                    this.loadBrokenTools(schedule.broken);
-                }
-
-                // Re-setup drag events
-                setupDragEvents();
-
-                announceToScreenReader('Saved schedule loaded successfully');
-                console.log('Schedule loaded successfully');
+            // Automatically load today's data without prompting
+            // Load inventory if saved
+            if (schedule.inventory) {
+                appState.setInventory(schedule.inventory);
+                initializeInventory();
             }
+
+            // Recreate crews (they were just initialized)
+            createCrewCards();
+
+            // Load checkouts
+            if (schedule.checkouts && Array.isArray(schedule.checkouts)) {
+                loadCheckouts(schedule.checkouts);
+            }
+
+            // Load broken tools
+            if (schedule.broken && Array.isArray(schedule.broken)) {
+                this.loadBrokenTools(schedule.broken);
+            }
+
+            // Re-setup drag events
+            setupDragEvents();
+
+            announceToScreenReader('Saved schedule loaded successfully');
+            console.log('Schedule loaded successfully');
         } catch (error) {
             console.error('Error loading schedule:', error);
             showNotification('error', 'Error loading saved schedule: ' + error.message);
