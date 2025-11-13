@@ -63,6 +63,21 @@ button:disabled {
     color: white;
 }
 
+.btn-save-history {
+    background: #6c5ce7;
+    color: white;
+}
+
+.btn-load-yesterday {
+    background: #fd79a8;
+    color: white;
+}
+
+.btn-view-history {
+    background: #00cec9;
+    color: white;
+}
+
 .btn-secondary {
     background: var(--color-secondary);
     color: white;
@@ -164,6 +179,12 @@ button:disabled {
 
 .tool-stack.expanded .tool-item {
     display: inline-flex !important;
+}
+
+/* Never show checked-out tools, even in expanded stacks */
+.tool-stack .tool-item.checked-out,
+.tool-stack.expanded .tool-item.checked-out {
+    display: none !important;
 }
 
 .tool-stack.expanded .stack-label {
