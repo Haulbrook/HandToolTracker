@@ -4,7 +4,7 @@
  */
 
 import { createElement, getById, clearElement, announceToScreenReader } from './dom.js';
-import { returnTool } from './tools.js';
+import { returnTool, updateStackCount } from './tools.js';
 import CONFIG from './config.js';
 
 /**
@@ -297,7 +297,6 @@ export function loadCheckouts(checkoutsData) {
                 // Update stack count if part of a stack
                 const stack = originalTool.closest('.tool-stack');
                 if (stack) {
-                    const { updateStackCount } = require('./tools.js');
                     updateStackCount(stack);
                 }
 
