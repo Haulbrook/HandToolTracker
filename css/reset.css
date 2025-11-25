@@ -1,15 +1,17 @@
 /**
  * CSS Reset and Base Styles
+ * Deep Roots Operations Theme
  * Normalize browser defaults and set foundation
  */
 
-* {
+*, *::before, *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
 html {
+    font-size: 16px;
     -webkit-text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -17,16 +19,17 @@ html {
 
 body {
     font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    line-height: 1.5;
     background: var(--color-background);
     color: var(--color-text-primary);
     padding: var(--space-lg);
     overflow-x: auto;
-    line-height: 1.5;
 }
 
-/* Accessible focus styles */
+/* Accessible focus styles - Forest Green */
 *:focus-visible {
-    outline: 2px solid var(--color-info);
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
 
@@ -35,24 +38,42 @@ body {
     outline: none;
 }
 
-/* Scrollbar styling for webkit browsers */
+/* Link styles */
+a {
+    color: var(--color-text-link);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+a:hover {
+    color: var(--color-primary-dark);
+    text-decoration: underline;
+}
+
+/* Scrollbar styling - Forest theme */
 ::-webkit-scrollbar {
     width: 8px;
     height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--color-surface-alt);
     border-radius: var(--radius-sm);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #888;
+    background: var(--color-secondary-lighter);
     border-radius: var(--radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: var(--color-secondary-light);
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-secondary-lighter) var(--color-surface-alt);
 }
 
 /* Screen reader only class */
@@ -73,13 +94,22 @@ body {
     position: absolute;
     top: -40px;
     left: 0;
-    background: var(--color-primary);
-    color: white;
-    padding: var(--space-md);
+    background: var(--gradient-primary);
+    color: var(--color-text-inverse);
+    padding: var(--space-md) var(--space-lg);
     text-decoration: none;
     z-index: var(--z-modal);
+    border-radius: 0 0 var(--radius-md) 0;
+    font-weight: var(--font-weight-semibold);
+    transition: top var(--transition-fast);
 }
 
 .skip-link:focus {
     top: 0;
+}
+
+/* Selection styling */
+::selection {
+    background: rgba(58, 125, 92, 0.2);
+    color: var(--color-text-primary);
 }

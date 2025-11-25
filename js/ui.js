@@ -180,7 +180,7 @@ export function showSaveFeedback() {
     const originalBg = saveBtn.style.background;
 
     saveBtn.textContent = '✓ Saved!';
-    saveBtn.style.background = '#4cd137';
+    saveBtn.style.background = '#4A9D7E';
 
     setTimeout(() => {
         saveBtn.textContent = originalText;
