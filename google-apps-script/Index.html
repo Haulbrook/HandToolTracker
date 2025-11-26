@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="Daily tool checkout system for tracking hand tools, power tools, and equipment across work crews">
+
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <?!= include('Styles'); ?>
+</head>
+<body>
+    <!-- Skip link for keyboard navigation -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🔧 Daily Tool Checkout</h1>
+            <div class="header-info">
+                <div class="date-header" id="currentDate" aria-live="polite"></div>
+                <div class="update-time" id="updateTime" aria-live="polite">Last Updated: Never</div>
+            </div>
+            <nav class="action-buttons" aria-label="Main actions">
+                <button class="btn-expand" aria-label="Expand or collapse all tool stacks">
+                    ↔️ Expand All
+                </button>
+                <button class="btn-add" aria-label="Add new tool to inventory">
+                    ➕ Add Tool
+                </button>
+                <button class="btn-return-all" aria-label="Return all checked out tools">
+                    ↩️ Return All
+                </button>
+                <button class="btn-save" aria-label="Save current schedule">
+                    💾 Save
+                </button>
+                <button class="btn-save-history" aria-label="Save today's records to history">
+                    📅 Save to History
+                </button>
+                <button class="btn-load-yesterday" aria-label="Load yesterday's tool records">
+                    ⏮️ Load Yesterday
+                </button>
+                <button class="btn-view-history" aria-label="View and load from saved history">
+                    📋 View History
+                </button>
+                <button class="btn-clear" aria-label="Clear all checkouts and reset">
+                    🔄 Clear
+                </button>
+                <button class="btn-print" aria-label="Print schedule">
+                    🖨️ Print
+                </button>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main id="main-content">
+            <!-- Tool Inventory Pools -->
+            <section aria-label="Tool inventory">
+                <div class="resources-bar">
+                    <div class="resource-section">
+                        <h3>🔨 Hammers & Impact</h3>
+                        <div class="resource-items" id="hammersPool" role="list" aria-label="Hammer tools"></div>
+                    </div>
+
+                    <div class="resource-section">
+                        <h3>🔧 Drivers & Bits</h3>
+                        <div class="resource-items" id="driversPool" role="list" aria-label="Driver tools"></div>
+                    </div>
+
+                    <div class="resource-section">
+                        <h3>📐 Measuring & Layout</h3>
+                        <div class="resource-items" id="measuringPool" role="list" aria-label="Measuring tools"></div>
+                    </div>
+
+                    <div class="resource-section">
+                        <h3>✂️ Cutting Tools</h3>
+                        <div class="resource-items" id="cuttingPool" role="list" aria-label="Cutting tools"></div>
+                    </div>
+
+                    <div class="resource-section">
+                        <h3>🔗 Pliers & Wrenches</h3>
+                        <div class="resource-items" id="pliersPool" role="list" aria-label="Pliers and wrenches"></div>
+                    </div>
+
+                    <div class="resource-section">
+                        <h3>⚠️ Broken/Missing</h3>
+                        <div class="resource-items drop-zone" id="brokenPool" role="list" aria-label="Broken or missing tools"></div>
+                    </div>
+                </div>
+
+                <div class="resources-bar">
+                    <div class="resource-section">
+                        <h3>🔋 Batteries & Chargers</h3>
+                        <div class="resource-items" id="batteriesPool" role="list" aria-label="Batteries and chargers"></div>
+                    </div>
+
+                    <div class="resource-section">
+                        <h3>⚡ Power Tools</h3>
+                        <div class="resource-items" id="powerPool" role="list" aria-label="Power tools"></div>
+                    </div>
+
+                    <div class="resource-section">
+                        <h3>🦺 Safety Equipment</h3>
+                        <div class="resource-items" id="safetyPool" role="list" aria-label="Safety equipment"></div>
+                    </div>
+
+                    <div class="resource-section" style="grid-column: span 3;">
+                        <h3>📦 Miscellaneous</h3>
+                        <div class="resource-items" id="miscPool" role="list" aria-label="Miscellaneous tools"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Crew Checkouts -->
+            <section aria-label="Crew tool checkouts">
+                <h2 class="section-heading">Tool Checkouts by Crew</h2>
+                <div class="crews-container" id="crewsContainer" role="region" aria-label="Crew checkout areas">
+                    <!-- Crew cards will be generated by JavaScript -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Add Tool Modal -->
+    <div id="addModal" class="modal" role="dialog" aria-labelledby="modalTitle" aria-hidden="true" aria-modal="true">
+        <div class="modal-content">
+            <button class="close" aria-label="Close dialog">&times;</button>
+            <h2 class="modal-header" id="modalTitle">Add New Tool</h2>
+
+            <form onsubmit="return false;">
+                <div class="form-group">
+                    <label for="toolName">Tool Name:</label>
+                    <input
+                        type="text"
+                        id="toolName"
+                        placeholder="Enter tool name..."
+                        required
+                        aria-required="true"
+                        autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="toolCategory">Category:</label>
+                    <select id="toolCategory" aria-required="true">
+                        <option value="hammers">Hammers & Impact</option>
+                        <option value="drivers">Drivers & Bits</option>
+                        <option value="measuring">Measuring & Layout</option>
+                        <option value="cutting">Cutting Tools</option>
+                        <option value="pliers">Pliers & Wrenches</option>
+                        <option value="batteries">Batteries & Chargers</option>
+                        <option value="power">Power Tools</option>
+                        <option value="safety">Safety Equipment</option>
+                        <option value="misc">Miscellaneous</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="toolQuantity">Quantity:</label>
+                    <input
+                        type="number"
+                        id="toolQuantity"
+                        min="1"
+                        max="999"
+                        value="1"
+                        required
+                        aria-required="true">
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-save">Add Tool</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- iOS Drag Drop Polyfill -->
+    <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
+
+    <?!= include('Scripts'); ?>
+
+    <!-- No JavaScript fallback -->
+    <noscript>
+        <div style="padding: 16px 24px; background: #FFEBEE; border: 2px solid #C62828; margin: 20px; border-radius: 12px; font-family: 'Inter', sans-serif; color: #C62828;">
+            <strong>JavaScript Required:</strong> This application requires JavaScript to function.
+            Please enable JavaScript in your browser settings.
+        </div>
+    </noscript>
+</body>
+</html>

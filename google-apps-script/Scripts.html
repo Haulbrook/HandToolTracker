@@ -1,0 +1,1210 @@
+<script>
+/**
+ * Hand Tool Tracker - Google Apps Script Version
+ * All modules combined into a single script
+ */
+
+// ============================================
+// CONFIG
+// ============================================
+const CONFIG = {
+    CREW_COUNT: 8,
+    AUTO_SAVE_INTERVAL: 30000,
+
+    STORAGE_KEYS: {
+        SCHEDULE: 'toolCheckoutSchedule',
+        DATE: 'toolCheckoutDate',
+        UPDATE_TIME: 'toolLastUpdateTime',
+        INVENTORY: 'toolInventory'
+    },
+
+    CATEGORIES: {
+        HAMMERS: 'hammers',
+        DRIVERS: 'drivers',
+        MEASURING: 'measuring',
+        CUTTING: 'cutting',
+        PLIERS: 'pliers',
+        BATTERIES: 'batteries',
+        POWER: 'power',
+        SAFETY: 'safety',
+        MISC: 'misc'
+    },
+
+    CATEGORY_CLASSES: {
+        hammers: 'hammer',
+        drivers: 'screwdriver',
+        measuring: 'measuring',
+        cutting: 'cutting',
+        pliers: 'pliers',
+        batteries: 'battery',
+        power: 'power-tool',
+        safety: 'safety',
+        misc: 'misc'
+    },
+
+    POOL_IDS: {
+        hammers: 'hammersPool',
+        drivers: 'driversPool',
+        measuring: 'measuringPool',
+        cutting: 'cuttingPool',
+        pliers: 'pliersPool',
+        batteries: 'batteriesPool',
+        power: 'powerPool',
+        safety: 'safetyPool',
+        misc: 'miscPool',
+        broken: 'brokenPool'
+    },
+
+    ELEMENTS: {
+        CURRENT_DATE: 'currentDate',
+        UPDATE_TIME: 'updateTime',
+        CREWS_CONTAINER: 'crewsContainer',
+        ADD_MODAL: 'addModal',
+        TOOL_NAME_INPUT: 'toolName',
+        TOOL_CATEGORY_SELECT: 'toolCategory',
+        TOOL_QUANTITY_INPUT: 'toolQuantity'
+    },
+
+    DATE_FORMAT: { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' },
+    TIME_FORMAT: { hour: '2-digit', minute: '2-digit' },
+    DATETIME_FORMAT: { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' },
+
+    VALIDATION: {
+        MIN_TOOL_NAME_LENGTH: 1,
+        MAX_TOOL_NAME_LENGTH: 100,
+        MIN_QUANTITY: 1,
+        MAX_QUANTITY: 999
+    }
+};
+
+const DEFAULT_TOOL_INVENTORY = {
+    hammers: [
+        { name: 'Claw Hammer', qty: 8, class: 'hammer' },
+        { name: 'Mini Sledge', qty: 4, class: 'hammer' },
+        { name: 'Dead Blow', qty: 3, class: 'hammer' },
+        { name: 'Framing Hammer', qty: 6, class: 'hammer' }
+    ],
+    drivers: [
+        { name: 'Phillips Screwdriver', qty: 10, class: 'screwdriver' },
+        { name: 'Flathead Screwdriver', qty: 10, class: 'screwdriver' },
+        { name: 'Impact Bit Set', qty: 6, class: 'screwdriver' },
+        { name: 'Multi-bit Driver', qty: 6, class: 'screwdriver' }
+    ],
+    measuring: [
+        { name: 'Level 2ft', qty: 6, class: 'measuring' },
+        { name: 'Level 4ft', qty: 4, class: 'measuring' },
+        { name: 'Framing Square', qty: 5, class: 'measuring' },
+        { name: 'Chalk Line', qty: 8, class: 'measuring' },
+        { name: 'String Line', qty: 10, class: 'measuring' },
+        { name: 'Tape Measure', qty: 15, class: 'measuring' }
+    ],
+    cutting: [
+        { name: 'Machete', qty: 4, class: 'cutting' },
+        { name: 'Utility Knife', qty: 12, class: 'cutting' },
+        { name: 'Hacksaw', qty: 4, class: 'cutting' },
+        { name: 'Tin Snips', qty: 6, class: 'cutting' }
+    ],
+    pliers: [
+        { name: 'Pliers', qty: 10, class: 'pliers' },
+        { name: 'Needle Nose Pliers', qty: 8, class: 'pliers' },
+        { name: 'Wire Strippers', qty: 6, class: 'pliers' },
+        { name: 'Wrench Set', qty: 5, class: 'fastening' },
+        { name: 'Adjustable Wrench', qty: 6, class: 'fastening' }
+    ],
+    batteries: [
+        { name: 'DeWalt 20V Battery', qty: 12, class: 'battery' },
+        { name: 'Milwaukee M18 Battery', qty: 8, class: 'battery' },
+        { name: 'Battery Charger', qty: 4, class: 'battery' }
+    ],
+    power: [
+        { name: 'Paint Gun', qty: 2, class: 'power-tool' },
+        { name: 'Impact Driver', qty: 6, class: 'power-tool' },
+        { name: 'Drill', qty: 8, class: 'power-tool' },
+        { name: 'Circular Saw', qty: 4, class: 'power-tool' }
+    ],
+    safety: [
+        { name: 'Safety Glasses', qty: 20, class: 'safety' },
+        { name: 'Work Gloves', qty: 30, class: 'safety' },
+        { name: 'Ear Protection', qty: 15, class: 'safety' }
+    ],
+    misc: [
+        { name: 'Tool Belt', qty: 10, class: 'misc' },
+        { name: 'Extension Cord', qty: 6, class: 'misc' },
+        { name: 'Work Light', qty: 5, class: 'misc' }
+    ]
+};
+
+// ============================================
+// STATE MANAGEMENT
+// ============================================
+const appState = {
+    toolInventory: JSON.parse(JSON.stringify(DEFAULT_TOOL_INVENTORY)),
+    expandedStacks: new Set(),
+    draggedElement: null,
+    lastUpdateTime: null,
+
+    getInventory() {
+        return JSON.parse(JSON.stringify(this.toolInventory));
+    },
+
+    setInventory(inventory) {
+        this.toolInventory = JSON.parse(JSON.stringify(inventory));
+    },
+
+    addTool(category, tool) {
+        if (!this.toolInventory[category]) {
+            this.toolInventory[category] = [];
+        }
+        this.toolInventory[category].push(tool);
+    },
+
+    toggleStack(toolName) {
+        if (this.expandedStacks.has(toolName)) {
+            this.expandedStacks.delete(toolName);
+        } else {
+            this.expandedStacks.add(toolName);
+        }
+    },
+
+    expandAllStacks(toolNames) {
+        this.expandedStacks = new Set(toolNames);
+    },
+
+    collapseAllStacks() {
+        this.expandedStacks = new Set();
+    },
+
+    setDraggedElement(element) {
+        this.draggedElement = element;
+    },
+
+    getDraggedElement() {
+        return this.draggedElement;
+    },
+
+    clearDraggedElement() {
+        this.draggedElement = null;
+    },
+
+    setLastUpdateTime(time) {
+        this.lastUpdateTime = time;
+    }
+};
+
+// ============================================
+// STORAGE (localStorage)
+// ============================================
+const storage = {
+    isAvailable: (function() {
+        try {
+            const test = '__storage_test__';
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            return true;
+        } catch(e) {
+            return false;
+        }
+    })(),
+
+    getItem(key, defaultValue = null) {
+        if (!this.isAvailable) return defaultValue;
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : defaultValue;
+        } catch(e) {
+            return defaultValue;
+        }
+    },
+
+    setItem(key, value) {
+        if (!this.isAvailable) return false;
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
+        } catch(e) {
+            return false;
+        }
+    },
+
+    removeItem(key) {
+        if (!this.isAvailable) return false;
+        try {
+            localStorage.removeItem(key);
+            return true;
+        } catch(e) {
+            return false;
+        }
+    },
+
+    getCurrentDateString() {
+        return new Date().toDateString();
+    },
+
+    isToday() {
+        return this.getItem(CONFIG.STORAGE_KEYS.DATE) === this.getCurrentDateString();
+    },
+
+    saveSchedule(data) {
+        const success = this.setItem(CONFIG.STORAGE_KEYS.SCHEDULE, data);
+        if (success) {
+            this.setItem(CONFIG.STORAGE_KEYS.DATE, this.getCurrentDateString());
+        }
+        return success;
+    },
+
+    loadSchedule() {
+        if (!this.isToday()) return null;
+        return this.getItem(CONFIG.STORAGE_KEYS.SCHEDULE);
+    },
+
+    saveUpdateTime(time) {
+        return this.setItem(CONFIG.STORAGE_KEYS.UPDATE_TIME, time);
+    },
+
+    loadUpdateTime() {
+        return this.getItem(CONFIG.STORAGE_KEYS.UPDATE_TIME);
+    },
+
+    getDateKey(date = null) {
+        const d = date || new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    },
+
+    getYesterdayKey() {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        return this.getDateKey(yesterday);
+    },
+
+    saveToHistory(data, dateKey = null) {
+        const key = dateKey || this.getDateKey();
+        const historyKey = `toolHistory_${key}`;
+        const entry = { ...data, savedAt: new Date().toISOString(), dateKey: key };
+        const success = this.setItem(historyKey, entry);
+        if (success) {
+            const index = this.getItem('toolHistoryIndex', []);
+            if (!index.includes(key)) {
+                index.unshift(key);
+                if (index.length > 90) index.splice(90);
+                this.setItem('toolHistoryIndex', index);
+            }
+        }
+        return success;
+    },
+
+    loadFromHistory(dateKey) {
+        return this.getItem(`toolHistory_${dateKey}`);
+    },
+
+    loadYesterday() {
+        return this.loadFromHistory(this.getYesterdayKey());
+    },
+
+    formatDateKey(dateKey) {
+        const [year, month, day] = dateKey.split('-');
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    },
+
+    getHistoryDates() {
+        return this.getItem('toolHistoryIndex', []);
+    },
+
+    getHistorySummary() {
+        return this.getHistoryDates().map(dateKey => {
+            const entry = this.loadFromHistory(dateKey);
+            if (!entry) return null;
+            return {
+                dateKey,
+                formattedDate: this.formatDateKey(dateKey),
+                savedAt: entry.savedAt,
+                toolCount: entry.checkouts?.reduce((sum, crew) => sum + crew.tools.length, 0) || 0,
+                crewCount: entry.checkouts?.length || 0
+            };
+        }).filter(Boolean);
+    }
+};
+
+// ============================================
+// DOM UTILITIES
+// ============================================
+function getById(id) {
+    return document.getElementById(id);
+}
+
+function querySelectorAll(selector, parent = document) {
+    return parent.querySelectorAll(selector);
+}
+
+function addClass(el, cls) {
+    if (el) el.classList.add(cls);
+}
+
+function removeClass(el, cls) {
+    if (el) el.classList.remove(cls);
+}
+
+function clearElement(el) {
+    while (el && el.firstChild) el.removeChild(el.firstChild);
+}
+
+function createElement(tag, options = {}) {
+    const el = document.createElement(tag);
+    if (options.className) el.className = options.className;
+    if (options.id) el.id = options.id;
+    if (options.textContent) el.textContent = options.textContent;
+    if (options.draggable !== undefined) el.draggable = options.draggable;
+    if (options.dataset) Object.entries(options.dataset).forEach(([k, v]) => el.dataset[k] = v);
+    if (options.aria) Object.entries(options.aria).forEach(([k, v]) => el.setAttribute(`aria-${k}`, v));
+    if (options.attributes) Object.entries(options.attributes).forEach(([k, v]) => el.setAttribute(k, v));
+    if (options.events) Object.entries(options.events).forEach(([e, h]) => el.addEventListener(e, h));
+    if (options.children) options.children.forEach(c => {
+        if (c instanceof HTMLElement || c instanceof Text) el.appendChild(c);
+        else if (typeof c === 'string') el.appendChild(document.createTextNode(c));
+    });
+    return el;
+}
+
+function announceToScreenReader(message) {
+    const region = getById('ariaLiveRegion');
+    if (region) {
+        region.textContent = message;
+        setTimeout(() => region.textContent = '', 1000);
+    }
+}
+
+function createAriaLiveRegion() {
+    if (!getById('ariaLiveRegion')) {
+        const region = createElement('div', {
+            id: 'ariaLiveRegion',
+            className: 'sr-only',
+            aria: { live: 'polite', atomic: 'true' }
+        });
+        document.body.appendChild(region);
+    }
+}
+
+// ============================================
+// TOOLS MANAGEMENT
+// ============================================
+function createToolElement(tool, toolNumber) {
+    return createElement('div', {
+        className: `draggable ${tool.class}`,
+        draggable: true,
+        textContent: `${tool.name} #${toolNumber}`,
+        dataset: { toolName: tool.name, toolNumber: String(toolNumber), toolClass: tool.class },
+        attributes: { role: 'button', tabindex: '0' },
+        aria: { label: `${tool.name} number ${toolNumber}, draggable tool`, grabbed: 'false' }
+    });
+}
+
+function createToolStack(tool, poolId) {
+    const pool = getById(poolId);
+    if (!pool) return;
+
+    if (tool.qty === 1) {
+        pool.appendChild(createToolElement(tool, 1));
+    } else {
+        const stackDiv = createElement('div', {
+            className: 'tool-stack',
+            dataset: { toolName: tool.name },
+            attributes: { role: 'group', tabindex: '0' },
+            aria: { label: `${tool.name} stack, ${tool.qty} tools available. Press Enter to expand.` }
+        });
+
+        const stackLabel = createElement('div', {
+            className: `draggable ${tool.class} stack-label`,
+            draggable: false,
+            textContent: tool.name,
+            dataset: { toolName: tool.name }
+        });
+
+        const countBadge = createElement('span', {
+            className: 'stack-count',
+            textContent: String(tool.qty),
+            aria: { label: `${tool.qty} available` }
+        });
+
+        stackLabel.appendChild(countBadge);
+        stackDiv.appendChild(stackLabel);
+
+        for (let i = 1; i <= tool.qty; i++) {
+            const toolDiv = createToolElement(tool, i);
+            toolDiv.classList.add('tool-item');
+            stackDiv.appendChild(toolDiv);
+        }
+
+        const toggleStack = (e) => {
+            if (e.target.classList.contains('tool-item') || e.target.closest('.tool-item')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const isExpanded = stackDiv.classList.toggle('expanded');
+            appState.toggleStack(tool.name);
+            updateStackCount(stackDiv);
+        };
+
+        stackDiv.addEventListener('click', toggleStack);
+        stackDiv.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') toggleStack(e);
+        });
+        stackDiv.addEventListener('touchend', (e) => {
+            if (!e.target.closest('.tool-item')) toggleStack(e);
+        });
+
+        pool.appendChild(stackDiv);
+    }
+}
+
+function updateStackCount(stackDiv) {
+    const count = stackDiv.querySelectorAll('.tool-item:not(.checked-out)').length;
+    const badge = stackDiv.querySelector('.stack-count');
+    if (badge) {
+        badge.textContent = String(count);
+        stackDiv.style.display = count === 0 ? 'none' : '';
+    }
+}
+
+function initializeInventory() {
+    const inventory = appState.getInventory();
+    Object.values(CONFIG.POOL_IDS).forEach(poolId => {
+        const pool = getById(poolId);
+        if (pool && poolId !== 'brokenPool') clearElement(pool);
+    });
+
+    Object.entries(inventory).forEach(([category, tools]) => {
+        const poolId = CONFIG.POOL_IDS[category];
+        if (poolId) tools.forEach(tool => createToolStack(tool, poolId));
+    });
+}
+
+function addTool(name, category, quantity) {
+    const qty = parseInt(quantity, 10);
+    if (!name || name.trim().length < 1 || isNaN(qty) || qty < 1 || qty > 999) {
+        return { success: false, errors: ['Invalid tool name or quantity'] };
+    }
+
+    const toolClass = CONFIG.CATEGORY_CLASSES[category] || 'misc';
+    const newTool = { name: name.trim(), qty, class: toolClass };
+
+    appState.addTool(category, newTool);
+
+    const poolId = CONFIG.POOL_IDS[category];
+    if (poolId) createToolStack(newTool, poolId);
+
+    return { success: true, tool: newTool };
+}
+
+function returnTool(toolElement) {
+    if (!toolElement) return false;
+
+    const originalTool = document.querySelector(
+        `.draggable[data-tool-name="${toolElement.dataset.toolName}"][data-tool-number="${toolElement.dataset.toolNumber}"]`
+    );
+
+    if (originalTool) {
+        originalTool.classList.remove('checked-out');
+        originalTool.style.display = '';
+        delete originalTool.dataset.checkoutTime;
+        delete originalTool.dataset.crew;
+
+        const stack = originalTool.closest('.tool-stack');
+        if (stack) updateStackCount(stack);
+        return true;
+    }
+    return false;
+}
+
+function returnAllTools() {
+    let count = 0;
+    querySelectorAll('.draggable.checked-out').forEach(tool => {
+        if (returnTool(tool)) count++;
+    });
+    querySelectorAll('.drop-zone[data-crew]').forEach(zone => clearElement(zone));
+    return count;
+}
+
+function toggleExpandAll() {
+    const stacks = querySelectorAll('.tool-stack');
+    const shouldExpand = !document.querySelector('.tool-stack.expanded');
+
+    stacks.forEach(stack => {
+        if (shouldExpand) stack.classList.add('expanded');
+        else stack.classList.remove('expanded');
+    });
+
+    if (shouldExpand) {
+        appState.expandAllStacks(Array.from(stacks).map(s => s.dataset.toolName));
+    } else {
+        appState.collapseAllStacks();
+    }
+}
+
+function getCheckoutData() {
+    const checkouts = [];
+    querySelectorAll('.drop-zone[data-crew]').forEach(zone => {
+        const crew = zone.dataset.crew;
+        const items = Array.from(zone.children);
+        if (items.length > 0) {
+            checkouts.push({
+                crew,
+                tools: items.map(item => ({
+                    tool: item.dataset.originalTool,
+                    number: item.dataset.toolNumber,
+                    crew,
+                    time: item.dataset.checkoutTime || ''
+                }))
+            });
+        }
+    });
+    return checkouts;
+}
+
+function getBrokenToolsData() {
+    const pool = getById('brokenPool');
+    if (!pool) return [];
+    return Array.from(querySelectorAll('.draggable', pool)).map(el => ({
+        name: el.dataset.toolName,
+        number: el.dataset.toolNumber
+    }));
+}
+
+// ============================================
+// CREWS MANAGEMENT
+// ============================================
+function createCrewCard(crewNumber) {
+    const card = createElement('div', {
+        className: 'crew-card',
+        dataset: { crew: String(crewNumber) },
+        attributes: { role: 'region' },
+        aria: { label: `Crew ${crewNumber} checkout area` }
+    });
+
+    card.appendChild(createElement('div', {
+        className: 'crew-header',
+        textContent: `Crew ${crewNumber}`
+    }));
+
+    const body = createElement('div', { className: 'crew-body' });
+    const section = createElement('div', { className: 'crew-section' });
+
+    section.appendChild(createElement('div', {
+        className: 'crew-section-title',
+        textContent: 'Checked Out Tools'
+    }));
+
+    section.appendChild(createElement('div', {
+        className: 'drop-zone',
+        dataset: { crew: String(crewNumber) },
+        attributes: { role: 'list' },
+        aria: { label: `Drop zone for Crew ${crewNumber}`, dropeffect: 'move' }
+    }));
+
+    body.appendChild(section);
+    card.appendChild(body);
+    return card;
+}
+
+function createCrewCards() {
+    const container = getById(CONFIG.ELEMENTS.CREWS_CONTAINER);
+    if (!container) return;
+
+    clearElement(container);
+    for (let i = 1; i <= CONFIG.CREW_COUNT; i++) {
+        container.appendChild(createCrewCard(i));
+    }
+}
+
+function createCheckoutItem(tool, toolNumber, time, crewNumber) {
+    const item = createElement('div', {
+        className: 'checkout-item',
+        dataset: { originalTool: tool, toolNumber, checkoutTime: time, crew: crewNumber },
+        attributes: { role: 'listitem' },
+        aria: { label: `${tool} number ${toolNumber} checked out at ${time}` }
+    });
+
+    const returnBtn = createElement('button', {
+        className: 'return-btn',
+        textContent: 'Return',
+        attributes: { type: 'button' },
+        aria: { label: `Return ${tool} number ${toolNumber}` }
+    });
+
+    returnBtn.addEventListener('click', () => {
+        const checkoutItem = returnBtn.closest('.checkout-item');
+        if (checkoutItem) {
+            const original = document.querySelector(
+                `.draggable[data-tool-name="${checkoutItem.dataset.originalTool}"][data-tool-number="${checkoutItem.dataset.toolNumber}"]`
+            );
+            if (returnTool(original)) {
+                checkoutItem.remove();
+                updateLastModifiedTime();
+            }
+        }
+    });
+
+    const toolInfo = createElement('span', {
+        className: 'tool-info',
+        textContent: `${tool} #${toolNumber} `
+    });
+
+    toolInfo.appendChild(createElement('span', {
+        className: 'checkout-time',
+        textContent: time
+    }));
+
+    item.appendChild(returnBtn);
+    item.appendChild(toolInfo);
+    return item;
+}
+
+function checkoutTool(toolElement, dropZone) {
+    if (!toolElement || !dropZone) return false;
+
+    const crewNumber = dropZone.dataset.crew;
+    if (!crewNumber) return false;
+
+    const time = new Date().toLocaleTimeString('en-US', CONFIG.TIME_FORMAT);
+    const checkoutItem = createCheckoutItem(
+        toolElement.dataset.toolName,
+        toolElement.dataset.toolNumber,
+        time,
+        crewNumber
+    );
+
+    toolElement.classList.add('checked-out');
+    toolElement.style.display = 'none';
+    toolElement.dataset.checkoutTime = time;
+    toolElement.dataset.crew = crewNumber;
+
+    dropZone.appendChild(checkoutItem);
+    return true;
+}
+
+function loadCheckouts(checkoutsData) {
+    if (!checkoutsData || !Array.isArray(checkoutsData)) return;
+
+    checkoutsData.forEach(({ crew, tools }) => {
+        const dropZone = document.querySelector(`.drop-zone[data-crew="${crew}"]`);
+        if (!dropZone) return;
+
+        tools.forEach(({ tool, number, time }) => {
+            const original = document.querySelector(
+                `.draggable[data-tool-name="${tool}"][data-tool-number="${number}"]`
+            );
+
+            if (original && dropZone) {
+                const checkoutItem = createCheckoutItem(tool, number, time || 'N/A', crew);
+                original.classList.add('checked-out');
+                original.style.display = 'none';
+                original.dataset.checkoutTime = time || '';
+                original.dataset.crew = crew;
+                dropZone.appendChild(checkoutItem);
+
+                const stack = original.closest('.tool-stack');
+                if (stack) updateStackCount(stack);
+            }
+        });
+    });
+}
+
+function clearAllCheckouts() {
+    querySelectorAll('.drop-zone[data-crew]').forEach(zone => clearElement(zone));
+}
+
+// ============================================
+// DRAG AND DROP
+// ============================================
+let touchItem = null;
+let touchOffset = { x: 0, y: 0 };
+let touchClone = null;
+let globalEventsSetup = false;
+let lastDropTime = 0;
+let lastDropTool = null;
+const DROP_DEBOUNCE_MS = 100;
+
+function setupDragEvents() {
+    querySelectorAll('.draggable').forEach(el => {
+        el.addEventListener('dragstart', handleDragStart);
+        el.addEventListener('dragend', handleDragEnd);
+        el.addEventListener('touchstart', handleTouchStart, { passive: false });
+        el.addEventListener('touchmove', handleTouchMove, { passive: false });
+        el.addEventListener('touchend', handleTouchEnd, { passive: false });
+    });
+
+    if (!globalEventsSetup) {
+        setupGlobalDropEvents();
+        globalEventsSetup = true;
+    }
+}
+
+function handleDragStart(e) {
+    const target = e.target;
+    if (!target.classList.contains('draggable') || target.classList.contains('stack-label') || target.classList.contains('checked-out')) {
+        e.preventDefault();
+        return;
+    }
+
+    appState.setDraggedElement(target);
+    addClass(target, 'dragging');
+    target.setAttribute('aria-grabbed', 'true');
+
+    if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', target.dataset.toolName);
+    }
+}
+
+function handleDragEnd(e) {
+    const target = e.target;
+    if (target.classList.contains('draggable')) {
+        removeClass(target, 'dragging');
+        target.setAttribute('aria-grabbed', 'false');
+    }
+    appState.clearDraggedElement();
+}
+
+function handleTouchStart(e) {
+    const target = e.target;
+    if (!target.classList.contains('draggable') || target.classList.contains('stack-label') || target.classList.contains('checked-out')) return;
+
+    touchItem = target;
+    appState.setDraggedElement(target);
+
+    const touch = e.touches[0];
+    const rect = target.getBoundingClientRect();
+    touchOffset.x = touch.clientX - rect.left;
+    touchOffset.y = touch.clientY - rect.top;
+
+    touchClone = target.cloneNode(true);
+    touchClone.style.position = 'fixed';
+    touchClone.style.zIndex = '9999';
+    touchClone.style.opacity = '0.5';
+    touchClone.style.pointerEvents = 'none';
+    touchClone.style.left = `${touch.clientX - touchOffset.x}px`;
+    touchClone.style.top = `${touch.clientY - touchOffset.y}px`;
+    document.body.appendChild(touchClone);
+
+    addClass(target, 'dragging');
+    e.preventDefault();
+}
+
+function handleTouchMove(e) {
+    if (!touchItem || !touchClone) return;
+
+    const touch = e.touches[0];
+    touchClone.style.left = `${touch.clientX - touchOffset.x}px`;
+    touchClone.style.top = `${touch.clientY - touchOffset.y}px`;
+
+    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+    const dropZone = elementBelow?.closest('.drop-zone') || elementBelow?.closest('.resource-items');
+
+    querySelectorAll('.drag-over').forEach(el => removeClass(el, 'drag-over'));
+    if (dropZone) addClass(dropZone, 'drag-over');
+
+    e.preventDefault();
+}
+
+function handleTouchEnd(e) {
+    if (!touchItem) return;
+
+    const touch = e.changedTouches[0];
+    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+    const dropZone = elementBelow?.closest('.drop-zone') || elementBelow?.closest('.resource-items');
+    const draggedElement = appState.getDraggedElement();
+
+    if (dropZone && draggedElement) {
+        removeClass(dropZone, 'drag-over');
+        handleDrop(draggedElement, dropZone);
+    }
+
+    if (touchClone) {
+        touchClone.remove();
+        touchClone = null;
+    }
+
+    if (touchItem) {
+        removeClass(touchItem, 'dragging');
+        touchItem = null;
+    }
+
+    appState.clearDraggedElement();
+    querySelectorAll('.drag-over').forEach(el => removeClass(el, 'drag-over'));
+    e.preventDefault();
+}
+
+function setupGlobalDropEvents() {
+    document.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    });
+
+    document.addEventListener('dragenter', (e) => {
+        const target = e.target;
+        if (target.classList.contains('drop-zone') || target.classList.contains('resource-items')) {
+            addClass(target, 'drag-over');
+        }
+    });
+
+    document.addEventListener('dragleave', (e) => {
+        const target = e.target;
+        if (target.classList.contains('drop-zone') || target.classList.contains('resource-items')) {
+            removeClass(target, 'drag-over');
+        }
+    });
+
+    document.addEventListener('drop', (e) => {
+        e.preventDefault();
+        let dropZone = e.target;
+        if (!dropZone.classList.contains('drop-zone') && !dropZone.classList.contains('resource-items')) {
+            dropZone = e.target.closest('.drop-zone') || e.target.closest('.resource-items');
+        }
+
+        const draggedElement = appState.getDraggedElement();
+        if (dropZone && draggedElement) {
+            removeClass(dropZone, 'drag-over');
+            handleDrop(draggedElement, dropZone);
+        }
+    });
+}
+
+function handleDrop(draggedElement, dropZone) {
+    if (!draggedElement || !dropZone) return;
+
+    const now = new Date().getTime();
+    const toolId = `${draggedElement.dataset.toolName}-${draggedElement.dataset.toolNumber}`;
+
+    if (now - lastDropTime < DROP_DEBOUNCE_MS && toolId === lastDropTool) return;
+
+    lastDropTime = now;
+    lastDropTool = toolId;
+
+    if (dropZone.dataset.crew) {
+        if (checkoutTool(draggedElement, dropZone)) {
+            const stack = draggedElement.closest('.tool-stack');
+            if (stack) updateStackCount(stack);
+            updateLastModifiedTime();
+        }
+    } else if (dropZone.id === 'brokenPool') {
+        draggedElement.classList.add('broken');
+        dropZone.appendChild(draggedElement);
+        updateLastModifiedTime();
+    } else if (dropZone.classList.contains('resource-items')) {
+        if (draggedElement.classList.contains('broken')) {
+            draggedElement.classList.remove('broken');
+        }
+        dropZone.appendChild(draggedElement);
+        const stack = draggedElement.closest('.tool-stack');
+        if (stack) updateStackCount(stack);
+        updateLastModifiedTime();
+    }
+}
+
+// ============================================
+// UI MODULE
+// ============================================
+function updateCurrentDate() {
+    const el = getById(CONFIG.ELEMENTS.CURRENT_DATE);
+    if (el) el.textContent = new Date().toLocaleDateString('en-US', CONFIG.DATE_FORMAT);
+}
+
+function updateLastModifiedTime() {
+    const now = new Date();
+    const timeString = now.toLocaleString('en-US', CONFIG.DATETIME_FORMAT);
+    const el = getById(CONFIG.ELEMENTS.UPDATE_TIME);
+    if (el) el.textContent = `Last Updated: ${timeString}`;
+    storage.saveUpdateTime(timeString);
+    appState.setLastUpdateTime(timeString);
+}
+
+function loadLastUpdateTime() {
+    const savedTime = storage.loadUpdateTime();
+    const el = getById(CONFIG.ELEMENTS.UPDATE_TIME);
+    if (el) el.textContent = savedTime ? `Last Updated: ${savedTime}` : 'Last Updated: Never';
+}
+
+function showAddModal() {
+    const modal = getById(CONFIG.ELEMENTS.ADD_MODAL);
+    if (modal) {
+        modal.setAttribute('aria-hidden', 'false');
+        modal.style.display = 'flex';
+        const input = getById(CONFIG.ELEMENTS.TOOL_NAME_INPUT);
+        if (input) setTimeout(() => input.focus(), 100);
+    }
+}
+
+function closeAddModal() {
+    const modal = getById(CONFIG.ELEMENTS.ADD_MODAL);
+    if (modal) {
+        modal.setAttribute('aria-hidden', 'true');
+        modal.style.display = 'none';
+        const nameInput = getById(CONFIG.ELEMENTS.TOOL_NAME_INPUT);
+        const qtyInput = getById(CONFIG.ELEMENTS.TOOL_QUANTITY_INPUT);
+        if (nameInput) nameInput.value = '';
+        if (qtyInput) qtyInput.value = '1';
+    }
+}
+
+function handleAddNewTool() {
+    const nameInput = getById(CONFIG.ELEMENTS.TOOL_NAME_INPUT);
+    const categorySelect = getById(CONFIG.ELEMENTS.TOOL_CATEGORY_SELECT);
+    const qtyInput = getById(CONFIG.ELEMENTS.TOOL_QUANTITY_INPUT);
+
+    if (!nameInput || !categorySelect || !qtyInput) return;
+
+    const result = addTool(nameInput.value.trim(), categorySelect.value, parseInt(qtyInput.value, 10));
+
+    if (result.success) {
+        setupDragEvents();
+        updateLastModifiedTime();
+        closeAddModal();
+        showNotification('success', `Added ${qtyInput.value} ${nameInput.value} to inventory`);
+    } else {
+        showNotification('error', result.errors.join(', '));
+    }
+}
+
+function showNotification(type, message) {
+    let container = getById('notificationContainer');
+    if (!container) {
+        container = createElement('div', { id: 'notificationContainer' });
+        container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; max-width: 400px;';
+        document.body.appendChild(container);
+    }
+
+    const notification = createElement('div', {
+        className: type === 'success' ? 'success-message' : 'error-message',
+        textContent: message
+    });
+    notification.style.cssText = 'margin-bottom: 10px; animation: slideIn 0.3s ease;';
+
+    container.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+function showSaveFeedback() {
+    const btn = document.querySelector('.btn-save');
+    if (!btn) return;
+
+    const originalText = btn.textContent;
+    const originalBg = btn.style.background;
+
+    btn.textContent = '✓ Saved!';
+    btn.style.background = '#4A9D7E';
+
+    setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.background = originalBg || '';
+    }, 2000);
+}
+
+// ============================================
+// MAIN APPLICATION
+// ============================================
+const app = {
+    autoSaveInterval: null,
+
+    init() {
+        console.log('Initializing Hand Tool Tracker...');
+        createAriaLiveRegion();
+        updateCurrentDate();
+        loadLastUpdateTime();
+        initializeInventory();
+        createCrewCards();
+        setupDragEvents();
+        this.setupEventListeners();
+        this.loadSchedule();
+        this.startAutoSave();
+        console.log('Hand Tool Tracker initialized');
+    },
+
+    setupEventListeners() {
+        document.querySelector('.btn-save')?.addEventListener('click', () => this.saveSchedule());
+        document.querySelector('.btn-clear')?.addEventListener('click', () => this.clearAll());
+        document.querySelector('.btn-print')?.addEventListener('click', () => window.print());
+        document.querySelector('.btn-add')?.addEventListener('click', () => showAddModal());
+        document.querySelector('.btn-return-all')?.addEventListener('click', () => this.returnAll());
+        document.querySelector('.btn-expand')?.addEventListener('click', () => toggleExpandAll());
+        document.querySelector('.btn-save-history')?.addEventListener('click', () => this.saveToHistory());
+        document.querySelector('.btn-load-yesterday')?.addEventListener('click', () => this.loadYesterday());
+        document.querySelector('.btn-view-history')?.addEventListener('click', () => this.showHistory());
+        document.querySelector('.close')?.addEventListener('click', () => closeAddModal());
+        document.querySelector('.modal-buttons .btn-secondary')?.addEventListener('click', () => closeAddModal());
+        document.querySelector('.modal-buttons .btn-save')?.addEventListener('click', () => handleAddNewTool());
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAddModal();
+        });
+
+        getById(CONFIG.ELEMENTS.ADD_MODAL)?.addEventListener('click', (e) => {
+            if (e.target.id === CONFIG.ELEMENTS.ADD_MODAL) closeAddModal();
+        });
+
+        [getById(CONFIG.ELEMENTS.TOOL_NAME_INPUT), getById(CONFIG.ELEMENTS.TOOL_QUANTITY_INPUT)].forEach(input => {
+            input?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddNewTool();
+                }
+            });
+        });
+    },
+
+    saveSchedule() {
+        const data = {
+            date: new Date().toISOString(),
+            lastUpdate: new Date().toLocaleString(),
+            inventory: appState.getInventory(),
+            checkouts: getCheckoutData(),
+            broken: getBrokenToolsData()
+        };
+
+        if (storage.saveSchedule(data)) {
+            storage.saveToHistory(data);
+            updateLastModifiedTime();
+            showSaveFeedback();
+        } else {
+            showNotification('error', 'Failed to save');
+        }
+    },
+
+    loadSchedule() {
+        const schedule = storage.loadSchedule();
+        if (!schedule) return;
+
+        if (schedule.inventory) {
+            appState.setInventory(schedule.inventory);
+            initializeInventory();
+        }
+
+        createCrewCards();
+
+        if (schedule.checkouts) loadCheckouts(schedule.checkouts);
+        if (schedule.broken) this.loadBrokenTools(schedule.broken);
+
+        setupDragEvents();
+    },
+
+    loadBrokenTools(brokenData) {
+        if (!brokenData) return;
+        const pool = getById('brokenPool');
+        if (!pool) return;
+
+        brokenData.forEach(({ name, number }) => {
+            const tool = document.querySelector(`.draggable[data-tool-name="${name}"][data-tool-number="${number}"]`);
+            if (tool) {
+                tool.classList.add('broken');
+                pool.appendChild(tool);
+            }
+        });
+    },
+
+    clearAll() {
+        if (confirm('Clear all tool checkouts and reset?')) {
+            clearAllCheckouts();
+            returnAllTools();
+            initializeInventory();
+            createCrewCards();
+            setupDragEvents();
+            updateLastModifiedTime();
+        }
+    },
+
+    returnAll() {
+        if (confirm('Return all checked out tools?')) {
+            const count = returnAllTools();
+            updateLastModifiedTime();
+            showNotification('success', `Returned ${count} tools`);
+        }
+    },
+
+    startAutoSave() {
+        if (this.autoSaveInterval) clearInterval(this.autoSaveInterval);
+        this.autoSaveInterval = setInterval(() => this.saveSchedule(), CONFIG.AUTO_SAVE_INTERVAL);
+    },
+
+    saveToHistory() {
+        const data = {
+            date: new Date().toISOString(),
+            lastUpdate: new Date().toLocaleString(),
+            inventory: appState.getInventory(),
+            checkouts: getCheckoutData(),
+            broken: getBrokenToolsData()
+        };
+
+        if (storage.saveToHistory(data)) {
+            updateLastModifiedTime();
+            showNotification('success', 'Saved to history');
+        }
+    },
+
+    loadYesterday() {
+        const data = storage.loadYesterday();
+        if (!data) {
+            showNotification('error', 'No records from yesterday');
+            return;
+        }
+
+        if (confirm('Load yesterday\'s records? This will replace current data.')) {
+            this.loadHistoryData(data);
+            showNotification('success', 'Loaded yesterday\'s records');
+        }
+    },
+
+    loadHistoryData(data) {
+        if (data.inventory) {
+            appState.setInventory(data.inventory);
+            initializeInventory();
+        }
+        createCrewCards();
+        if (data.checkouts) loadCheckouts(data.checkouts);
+        if (data.broken) this.loadBrokenTools(data.broken);
+        setupDragEvents();
+    },
+
+    showHistory() {
+        const summary = storage.getHistorySummary();
+        if (summary.length === 0) {
+            showNotification('error', 'No history records found');
+            return;
+        }
+
+        const list = summary.map((e, i) => `${i + 1}. ${e.formattedDate} - ${e.toolCount} tools`).join('\n');
+        const selection = prompt(`Select a date (1-${summary.length}):\n\n${list}`);
+
+        if (selection) {
+            const index = parseInt(selection, 10) - 1;
+            if (index >= 0 && index < summary.length) {
+                const entry = summary[index];
+                if (confirm(`Load records from ${entry.formattedDate}?`)) {
+                    const data = storage.loadFromHistory(entry.dateKey);
+                    if (data) {
+                        this.loadHistoryData(data);
+                        showNotification('success', `Loaded records from ${entry.formattedDate}`);
+                    }
+                }
+            }
+        }
+    }
+};
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => app.init());
+} else {
+    app.init();
+}
+
+// Enable iOS drag-drop polyfill
+if (window.MobileDragDrop) {
+    MobileDragDrop.polyfill({
+        dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
+    });
+}
+</script>
