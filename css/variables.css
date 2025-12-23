@@ -1,0 +1,193 @@
+/**
+ * Design Tokens - CSS Variables
+ * Deep Roots Operations Theme
+ * Centralized design system for consistency
+ */
+
+/* Google Fonts - Add to HTML <head>:
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+*/
+
+:root {
+    /* ===== PRIMARY COLORS (Forest Greens) ===== */
+    --color-primary-darkest: #1B4D3E;
+    --color-primary-dark: #2D5F4F;
+    --color-primary: #3A7D5C;
+    --color-primary-light: #4A9D7E;
+
+    /* ===== SECONDARY COLORS (Earth/Clay Tones) ===== */
+    --color-secondary-dark: #6D4C41;
+    --color-secondary: #8B5A3C;
+    --color-secondary-light: #A0785A;
+    --color-secondary-lighter: #BCAAA4;
+
+    /* ===== ACCENT COLORS (Coffee/Bark) ===== */
+    --color-accent-darkest: #3E2723;
+    --color-accent-dark: #4E342E;
+    --color-accent: #5D4037;
+    --color-accent-light: #8D6E63;
+
+    /* ===== SEMANTIC COLORS ===== */
+    --color-success: #3A7D5C;
+    --color-success-hover: #4A9D7E;
+    --color-success-dark: #2D5F4F;
+    --color-success-light: #E8F5E9;
+
+    --color-danger: #C62828;
+    --color-danger-light: #FFEBEE;
+
+    --color-warning: #A0785A;
+    --color-warning-light: #FFF3E0;
+
+    --color-info: #1565C0;
+    --color-info-light: #E3F2FD;
+
+    /* ===== SURFACE COLORS ===== */
+    --color-background: #F8FAFC;
+    --color-surface: #FFFFFF;
+    --color-surface-alt: #F1F5F9;
+    --color-surface-hover: #F5F5F5;
+
+    /* ===== BORDER COLORS ===== */
+    --color-border: #E0E0E0;
+    --color-border-light: #EEEEEE;
+    --color-border-dark: #BDBDBD;
+    --color-border-dashed: #E0E0E0;
+    --color-border-focus: #3A7D5C;
+
+    /* ===== TEXT COLORS ===== */
+    --color-text-primary: #212121;
+    --color-text-secondary: #757575;
+    --color-text-muted: #9E9E9E;
+    --color-text-disabled: #BDBDBD;
+    --color-text-inverse: #FFFFFF;
+    --color-text-link: #2D5F4F;
+
+    /* ===== TOOL CATEGORY COLORS (Forest-Inspired) ===== */
+    --color-hammer: #8B5A3C;         /* Clay/Earth */
+    --color-screwdriver: #3A7D5C;    /* Forest Green */
+    --color-battery: #A0785A;        /* Warm Earth */
+    --color-power-tool: #5D4037;     /* Coffee/Bark */
+    --color-measuring: #1565C0;      /* Deep Blue */
+    --color-cutting: #C62828;        /* Alert Red */
+    --color-pliers: #8D6E63;         /* Light Bark */
+    --color-fastening: #2D5F4F;      /* Dark Forest */
+    --color-safety: #4A9D7E;         /* Light Forest */
+    --color-misc: #6D4C41;           /* Earth Brown */
+
+    /* ===== CREW COLORS (Natural Palette) ===== */
+    --color-crew-1: #3A7D5C;         /* Forest Green */
+    --color-crew-2: #1565C0;         /* Deep Blue */
+    --color-crew-3: #A0785A;         /* Warm Earth */
+    --color-crew-4: #4A9D7E;         /* Light Forest */
+    --color-crew-5: #8B5A3C;         /* Clay */
+    --color-crew-6: #2D5F4F;         /* Dark Forest */
+
+    /* ===== BROKEN TOOL STYLING ===== */
+    --color-broken-bg: #FFEBEE;
+    --color-broken-border: #EF9A9A;
+    --color-broken-stripe-1: #EF5350;
+    --color-broken-stripe-2: #FFCDD2;
+
+    /* ===== GRADIENTS ===== */
+    --gradient-primary: linear-gradient(135deg, #1B4D3E 0%, #2D5F4F 50%, #3A7D5C 100%);
+    --gradient-secondary: linear-gradient(135deg, #2D5F4F 0%, #8B5A3C 100%);
+    --gradient-card: linear-gradient(135deg, rgba(58, 125, 92, 0.08) 0%, rgba(139, 90, 60, 0.08) 100%);
+    --gradient-subtle: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+
+    /* ===== SPACING SCALE ===== */
+    --space-xs: 4px;
+    --space-sm: 6px;
+    --space-md: 8px;
+    --space-lg: 12px;
+    --space-xl: 16px;
+    --space-2xl: 24px;
+
+    /* ===== BORDER RADIUS ===== */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 24px;
+    --radius-full: 9999px;
+
+    /* ===== TYPOGRAPHY ===== */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'SF Mono', 'Monaco', 'Cascadia Code', 'Consolas', monospace;
+
+    --font-size-xs: 0.75rem;    /* 12px */
+    --font-size-sm: 0.875rem;   /* 14px */
+    --font-size-md: 0.9375rem;  /* 15px */
+    --font-size-base: 1rem;     /* 16px */
+    --font-size-lg: 1.125rem;   /* 18px */
+    --font-size-xl: 1.25rem;    /* 20px */
+    --font-size-2xl: 1.5rem;    /* 24px */
+
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* ===== SHADOWS ===== */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
+    --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.12), 0 6px 12px rgba(0, 0, 0, 0.08);
+    --shadow-2xl: 0 20px 40px rgba(0, 0, 0, 0.15), 0 10px 20px rgba(0, 0, 0, 0.1);
+    --shadow-primary: 0 4px 14px rgba(58, 125, 92, 0.25);
+    --shadow-hover: 0 12px 24px rgba(58, 125, 92, 0.15), 0 6px 12px rgba(109, 76, 65, 0.1);
+
+    /* ===== TRANSITIONS ===== */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-medium: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /* ===== Z-INDEX SCALE ===== */
+    --z-base: 1;
+    --z-dropdown: 1000;
+    --z-sticky: 1100;
+    --z-fixed: 1200;
+    --z-modal-backdrop: 1300;
+    --z-modal: 1400;
+    --z-tooltip: 1600;
+    --z-drag-clone: 9999;
+
+    /* ===== LAYOUT ===== */
+    --container-min-width: 320px;
+    --container-max-width: 1600px;
+    --crew-card-width: 190px;
+
+    /* ===== TOUCH TARGETS ===== */
+    --touch-target-min: 44px;
+
+    /* ===== DRAG & DROP ===== */
+    --drag-opacity: 0.5;
+    --drag-over-bg: rgba(58, 125, 92, 0.1);
+    --drag-over-border: #3A7D5C;
+}
+
+/* Media Query Breakpoints */
+@media (max-width: 768px) {
+    :root {
+        --container-min-width: 100%;
+        --crew-card-width: 160px;
+        --font-size-2xl: 1.25rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --transition-fast: 0s;
+        --transition-base: 0s;
+        --transition-medium: 0s;
+        --transition-slow: 0s;
+        --transition-bounce: 0s;
+    }
+}
