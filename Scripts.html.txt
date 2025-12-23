@@ -1,0 +1,1117 @@
+<script>
+/**
+ * Hand Tool Tracker - Client-Side JavaScript
+ * Deep Roots Operations
+ */
+
+// ============================================
+// STATE MANAGEMENT
+// ============================================
+let toolInventory = {};
+let draggedElement = null;
+let expandedStacks = new Set();
+let isLoading = false;
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize date display
+    updateDateDisplay();
+
+    // Initialize mobile drag-drop polyfill
+    if (typeof MobileDragDrop !== 'undefined') {
+        MobileDragDrop.polyfill({
+            holdToDrag: 300
+        });
+    }
+
+    // Setup event listeners
+    setupButtonListeners();
+    setupModalListeners();
+    setupDragDropListeners();
+
+    // Load inventory from Google Sheets
+    loadInventoryFromSheet();
+});
+
+function updateDateDisplay() {
+    const dateEl = document.getElementById('currentDate');
+    if (dateEl) {
+        dateEl.textContent = new Date().toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+}
+
+// ============================================
+// BUTTON EVENT LISTENERS
+// ============================================
+
+function setupButtonListeners() {
+    // Expand All
+    document.querySelector('.btn-expand')?.addEventListener('click', toggleExpandAll);
+
+    // Add Tool
+    document.querySelector('.btn-add')?.addEventListener('click', showAddModal);
+
+    // Return All
+    document.querySelector('.btn-return-all')?.addEventListener('click', returnAllTools);
+
+    // Save
+    document.querySelector('.btn-save')?.addEventListener('click', saveSchedule);
+
+    // Save to History
+    document.querySelector('.btn-save-history')?.addEventListener('click', saveToHistory);
+
+    // Load Yesterday
+    document.querySelector('.btn-load-yesterday')?.addEventListener('click', showYesterdayModal);
+
+    // View History
+    document.querySelector('.btn-view-history')?.addEventListener('click', showHistoryModal);
+
+    // Clear
+    document.querySelector('.btn-clear')?.addEventListener('click', clearAllCheckouts);
+
+    // Print
+    document.querySelector('.btn-print')?.addEventListener('click', () => window.print());
+}
+
+// ============================================
+// MODAL LISTENERS
+// ============================================
+
+function setupModalListeners() {
+    // Add Tool Modal
+    const addModal = document.getElementById('addModal');
+    if (addModal) {
+        addModal.querySelector('.close')?.addEventListener('click', closeAddModal);
+        addModal.querySelector('.btn-secondary')?.addEventListener('click', closeAddModal);
+        addModal.querySelector('.btn-save')?.addEventListener('click', addNewTool);
+    }
+
+    // Close modals on outside click
+    window.addEventListener('click', function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.setAttribute('aria-hidden', 'true');
+        }
+    });
+
+    // Close modals on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.setAttribute('aria-hidden', 'true');
+            });
+        }
+    });
+}
+
+// ============================================
+// INVENTORY LOADING
+// ============================================
+
+function loadInventoryFromSheet() {
+    showLoading(true);
+    updateStatus('Loading inventory...');
+
+    google.script.run
+        .withSuccessHandler(function(result) {
+            showLoading(false);
+            if (result.success) {
+                toolInventory = result.data;
+                initializeInventory();
+                createCrewCards();
+                loadTodayCheckouts();
+                updateStatus('Inventory loaded');
+            } else {
+                showError('Failed to load inventory: ' + result.error);
+            }
+        })
+        .withFailureHandler(function(error) {
+            showLoading(false);
+            showError('Error loading inventory: ' + error.message);
+            // Fall back to empty inventory
+            initializeInventory();
+            createCrewCards();
+        })
+        .getInventory();
+}
+
+function loadTodayCheckouts() {
+    google.script.run
+        .withSuccessHandler(function(result) {
+            if (result.success && result.data.length > 0) {
+                restoreCheckouts(result.data);
+                updateLastModifiedTime();
+            }
+        })
+        .withFailureHandler(function(error) {
+            console.error('Error loading today checkouts:', error);
+        })
+        .getTodayCheckouts();
+}
+
+function restoreCheckouts(checkouts) {
+    checkouts.forEach(checkout => {
+        if (checkout.status === 'Checked Out') {
+            const crew = checkout.crew;
+            const dropZone = document.querySelector(`.drop-zone[data-crew="${crew}"]`);
+
+            if (dropZone) {
+                // Find the tool element
+                const toolElements = document.querySelectorAll(`.draggable[data-tool-name="${checkout.toolName}"]`);
+                toolElements.forEach(toolEl => {
+                    if (!toolEl.classList.contains('checked-out')) {
+                        // Create checkout item
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'checkout-item';
+                        wrapper.dataset.originalTool = checkout.toolName;
+                        wrapper.dataset.toolNumber = toolEl.dataset.toolNumber || '1';
+                        wrapper.innerHTML = `
+                            <span>${checkout.toolName}</span>
+                            <span class="checkout-time">${checkout.time || ''}</span>
+                            <button class="return-btn" type="button">Return</button>
+                        `;
+
+                        wrapper.querySelector('.return-btn').addEventListener('click', function() {
+                            returnTool(this);
+                        });
+
+                        toolEl.classList.add('checked-out');
+                        toolEl.style.display = 'none';
+
+                        dropZone.appendChild(wrapper);
+
+                        // Update stack count
+                        const stack = toolEl.closest('.tool-stack');
+                        if (stack) {
+                            updateStackCount(stack);
+                        }
+                        return;
+                    }
+                });
+            }
+        }
+    });
+}
+
+// ============================================
+// INVENTORY INITIALIZATION
+// ============================================
+
+function initializeInventory() {
+    const pools = ['hammersPool', 'driversPool', 'measuringPool', 'cuttingPool',
+                   'pliersPool', 'batteriesPool', 'powerPool', 'safetyPool', 'miscPool'];
+
+    pools.forEach(poolId => {
+        const pool = document.getElementById(poolId);
+        if (pool) {
+            pool.innerHTML = '';
+        }
+    });
+
+    // Create tool stacks for each category
+    Object.entries(toolInventory).forEach(([category, tools]) => {
+        const poolId = category + 'Pool';
+        const pool = document.getElementById(poolId);
+        if (pool && tools) {
+            tools.forEach(tool => {
+                createToolStack(tool, pool);
+            });
+        }
+    });
+
+    // Setup drag events for all draggables
+    setupDragEvents();
+}
+
+function createToolStack(tool, pool) {
+    if (tool.qty === 1) {
+        // Single tool, no stack needed
+        const toolDiv = document.createElement('div');
+        toolDiv.className = `draggable ${tool.class}`;
+        toolDiv.draggable = true;
+        toolDiv.textContent = tool.name;
+        toolDiv.dataset.toolName = tool.name;
+        toolDiv.dataset.toolNumber = '1';
+        toolDiv.setAttribute('role', 'listitem');
+        toolDiv.setAttribute('aria-label', tool.name);
+        pool.appendChild(toolDiv);
+    } else {
+        // Create stack for multiple tools
+        const stackDiv = document.createElement('div');
+        stackDiv.className = 'tool-stack';
+        stackDiv.dataset.toolName = tool.name;
+
+        // Stack label (shows when collapsed)
+        const stackLabel = document.createElement('div');
+        stackLabel.className = `draggable ${tool.class} stack-label`;
+        stackLabel.draggable = false;
+        stackLabel.textContent = tool.name;
+        stackLabel.setAttribute('role', 'button');
+        stackLabel.setAttribute('aria-expanded', 'false');
+        stackLabel.setAttribute('aria-label', `${tool.name} - ${tool.qty} available. Click to expand.`);
+        stackDiv.appendChild(stackLabel);
+
+        // Stack count badge
+        const countBadge = document.createElement('span');
+        countBadge.className = 'stack-count';
+        countBadge.textContent = tool.qty;
+        countBadge.setAttribute('aria-hidden', 'true');
+        stackLabel.appendChild(countBadge);
+
+        // Individual tool items (hidden by default)
+        for (let i = 1; i <= tool.qty; i++) {
+            const toolDiv = document.createElement('div');
+            toolDiv.className = `draggable ${tool.class} tool-item`;
+            toolDiv.draggable = true;
+            toolDiv.textContent = `${tool.name} #${i}`;
+            toolDiv.dataset.toolName = tool.name;
+            toolDiv.dataset.toolNumber = i.toString();
+            toolDiv.setAttribute('role', 'listitem');
+            stackDiv.appendChild(toolDiv);
+        }
+
+        // Click handler for expand/collapse
+        stackDiv.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('tool-item')) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleStack(stackDiv, tool.name);
+            }
+        });
+
+        pool.appendChild(stackDiv);
+    }
+}
+
+function toggleStack(stackDiv, toolName) {
+    stackDiv.classList.toggle('expanded');
+    const stackLabel = stackDiv.querySelector('.stack-label');
+
+    if (stackDiv.classList.contains('expanded')) {
+        expandedStacks.add(toolName);
+        stackLabel?.setAttribute('aria-expanded', 'true');
+    } else {
+        expandedStacks.delete(toolName);
+        stackLabel?.setAttribute('aria-expanded', 'false');
+    }
+    updateStackCount(stackDiv);
+}
+
+function updateStackCount(stackDiv) {
+    const availableCount = stackDiv.querySelectorAll('.tool-item:not(.checked-out)').length;
+    const countBadge = stackDiv.querySelector('.stack-count');
+    const stackLabel = stackDiv.querySelector('.stack-label');
+
+    if (countBadge) {
+        countBadge.textContent = availableCount;
+    }
+
+    if (availableCount === 0) {
+        stackDiv.style.display = 'none';
+    } else {
+        stackDiv.style.display = '';
+        if (stackLabel) {
+            const toolName = stackDiv.dataset.toolName;
+            stackLabel.setAttribute('aria-label', `${toolName} - ${availableCount} available. Click to expand.`);
+        }
+    }
+}
+
+function toggleExpandAll() {
+    const stacks = document.querySelectorAll('.tool-stack');
+    const btn = document.querySelector('.btn-expand');
+    const shouldExpand = !document.querySelector('.tool-stack.expanded');
+
+    stacks.forEach(stack => {
+        if (shouldExpand) {
+            stack.classList.add('expanded');
+            expandedStacks.add(stack.dataset.toolName);
+        } else {
+            stack.classList.remove('expanded');
+            expandedStacks.clear();
+        }
+    });
+
+    if (btn) {
+        btn.textContent = shouldExpand ? '↔️ Collapse All' : '↔️ Expand All';
+    }
+}
+
+// ============================================
+// CREW CARDS
+// ============================================
+
+function createCrewCards() {
+    const container = document.getElementById('crewsContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    for (let i = 1; i <= 8; i++) {
+        const crewCard = document.createElement('div');
+        crewCard.className = 'crew-card';
+        crewCard.dataset.crew = i.toString();
+        crewCard.innerHTML = `
+            <div class="crew-header">Crew ${i}</div>
+            <div class="crew-body">
+                <div class="crew-section">
+                    <div class="crew-section-title">Checked Out Tools</div>
+                    <div class="drop-zone" data-crew="${i}" role="list" aria-label="Crew ${i} checked out tools"></div>
+                </div>
+            </div>
+        `;
+        container.appendChild(crewCard);
+    }
+
+    // Setup drop zone listeners
+    setupDropZoneListeners();
+}
+
+// ============================================
+// DRAG AND DROP
+// ============================================
+
+function setupDragEvents() {
+    document.querySelectorAll('.draggable:not(.stack-label)').forEach(element => {
+        element.addEventListener('dragstart', handleDragStart);
+        element.addEventListener('dragend', handleDragEnd);
+    });
+}
+
+function setupDragDropListeners() {
+    document.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    });
+}
+
+function setupDropZoneListeners() {
+    const dropZones = document.querySelectorAll('.drop-zone, .resource-items');
+
+    dropZones.forEach(zone => {
+        zone.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        });
+
+        zone.addEventListener('dragleave', function(e) {
+            if (!this.contains(e.relatedTarget)) {
+                this.classList.remove('drag-over');
+            }
+        });
+
+        zone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+        });
+
+        zone.addEventListener('drop', handleDrop);
+    });
+}
+
+function handleDragStart(e) {
+    if (e.target.classList.contains('draggable') && !e.target.classList.contains('stack-label')) {
+        draggedElement = e.target;
+        e.target.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', e.target.dataset.toolName);
+    }
+}
+
+function handleDragEnd(e) {
+    if (e.target.classList.contains('draggable')) {
+        e.target.classList.remove('dragging');
+    }
+    draggedElement = null;
+
+    // Remove all drag-over classes
+    document.querySelectorAll('.drag-over').forEach(el => {
+        el.classList.remove('drag-over');
+    });
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+
+    let dropZone = e.target;
+    if (!dropZone.classList.contains('drop-zone') && !dropZone.classList.contains('resource-items')) {
+        dropZone = e.target.closest('.drop-zone') || e.target.closest('.resource-items');
+    }
+
+    if (!dropZone || !draggedElement) return;
+
+    dropZone.classList.remove('drag-over');
+
+    // Checkout to crew
+    if (dropZone.dataset.crew) {
+        checkoutTool(draggedElement, dropZone);
+    }
+    // Move to broken pool
+    else if (dropZone.id === 'brokenPool') {
+        markToolBroken(draggedElement, dropZone);
+    }
+    // Return to pool
+    else if (dropZone.classList.contains('resource-items')) {
+        returnToolToPool(draggedElement, dropZone);
+    }
+}
+
+// ============================================
+// CHECKOUT FUNCTIONS
+// ============================================
+
+function checkoutTool(toolElement, dropZone) {
+    const time = new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    const crew = dropZone.dataset.crew;
+    const toolName = toolElement.dataset.toolName;
+    const toolNumber = toolElement.dataset.toolNumber;
+
+    // Create checkout item
+    const wrapper = document.createElement('div');
+    wrapper.className = 'checkout-item';
+    wrapper.dataset.originalTool = toolName;
+    wrapper.dataset.toolNumber = toolNumber;
+    wrapper.innerHTML = `
+        <span>${toolElement.textContent}</span>
+        <span class="checkout-time">${time}</span>
+        <button class="return-btn" type="button">Return</button>
+    `;
+
+    wrapper.querySelector('.return-btn').addEventListener('click', function() {
+        returnTool(this);
+    });
+
+    // Mark tool as checked out
+    toolElement.classList.add('checked-out');
+    toolElement.style.display = 'none';
+    toolElement.dataset.checkoutTime = time;
+    toolElement.dataset.crew = crew;
+
+    dropZone.appendChild(wrapper);
+
+    // Update stack count
+    const stack = toolElement.closest('.tool-stack');
+    if (stack) {
+        updateStackCount(stack);
+    }
+
+    // Save to Google Sheets
+    google.script.run
+        .withSuccessHandler(function(result) {
+            if (!result.success) {
+                console.error('Failed to save checkout:', result.error);
+            }
+        })
+        .withFailureHandler(function(error) {
+            console.error('Error saving checkout:', error);
+        })
+        .saveCheckout({
+            toolName: toolName + (toolNumber ? ' #' + toolNumber : ''),
+            crew: crew,
+            checkedOutBy: '',
+            status: 'Checked Out'
+        });
+
+    updateLastModifiedTime();
+}
+
+function returnTool(btn) {
+    const wrapper = btn.closest('.checkout-item');
+    if (!wrapper) return;
+
+    const toolName = wrapper.dataset.originalTool;
+    const toolNumber = wrapper.dataset.toolNumber;
+    const crew = wrapper.closest('.drop-zone')?.dataset.crew;
+
+    // Find the original tool element
+    let originalTool;
+    if (toolNumber && toolNumber !== '1') {
+        originalTool = document.querySelector(
+            `.draggable[data-tool-name="${toolName}"][data-tool-number="${toolNumber}"]`
+        );
+    } else {
+        originalTool = document.querySelector(`.draggable[data-tool-name="${toolName}"]`);
+    }
+
+    if (originalTool) {
+        originalTool.classList.remove('checked-out');
+        originalTool.style.display = '';
+        delete originalTool.dataset.checkoutTime;
+        delete originalTool.dataset.crew;
+
+        // Update stack count
+        const stack = originalTool.closest('.tool-stack');
+        if (stack) {
+            updateStackCount(stack);
+        }
+    }
+
+    wrapper.remove();
+
+    // Update status in Google Sheets
+    google.script.run
+        .withSuccessHandler(function(result) {
+            if (!result.success) {
+                console.error('Failed to update checkout status:', result.error);
+            }
+        })
+        .withFailureHandler(function(error) {
+            console.error('Error updating checkout status:', error);
+        })
+        .updateCheckoutStatus(
+            toolName + (toolNumber && toolNumber !== '1' ? ' #' + toolNumber : ''),
+            crew,
+            'Returned'
+        );
+
+    updateLastModifiedTime();
+}
+
+function returnAllTools() {
+    if (!confirm('Return all checked out tools?')) return;
+
+    document.querySelectorAll('.return-btn').forEach(btn => {
+        returnTool(btn);
+    });
+}
+
+function markToolBroken(toolElement, brokenPool) {
+    toolElement.classList.add('broken');
+    brokenPool.appendChild(toolElement);
+    updateLastModifiedTime();
+}
+
+function returnToolToPool(toolElement, pool) {
+    toolElement.classList.remove('broken');
+    pool.appendChild(toolElement);
+    updateLastModifiedTime();
+}
+
+// ============================================
+// SAVE FUNCTIONS
+// ============================================
+
+function saveSchedule() {
+    const btn = document.querySelector('.btn-save');
+    const originalText = btn?.textContent || 'Save';
+
+    if (btn) {
+        btn.textContent = 'Saving...';
+        btn.disabled = true;
+    }
+
+    // Collect all current checkouts
+    const checkouts = [];
+    document.querySelectorAll('.drop-zone[data-crew]').forEach(zone => {
+        const crew = zone.dataset.crew;
+        zone.querySelectorAll('.checkout-item').forEach(item => {
+            checkouts.push({
+                toolName: item.dataset.originalTool,
+                toolNumber: item.dataset.toolNumber,
+                crew: crew,
+                time: item.querySelector('.checkout-time')?.textContent || ''
+            });
+        });
+    });
+
+    // Save to localStorage as backup
+    localStorage.setItem('toolCheckoutSchedule', JSON.stringify({
+        date: new Date().toISOString(),
+        checkouts: checkouts
+    }));
+
+    setTimeout(() => {
+        if (btn) {
+            btn.textContent = '✓ Saved!';
+            btn.style.background = 'var(--color-success)';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+                btn.disabled = false;
+            }, 2000);
+        }
+    }, 500);
+
+    updateLastModifiedTime();
+}
+
+function saveToHistory() {
+    const checkouts = [];
+    document.querySelectorAll('.drop-zone[data-crew]').forEach(zone => {
+        const crew = zone.dataset.crew;
+        zone.querySelectorAll('.checkout-item').forEach(item => {
+            const toolNumber = item.dataset.toolNumber;
+            checkouts.push({
+                toolName: item.dataset.originalTool + (toolNumber && toolNumber !== '1' ? ' #' + toolNumber : ''),
+                crew: crew,
+                checkedOutBy: '',
+                status: 'Checked Out'
+            });
+        });
+    });
+
+    if (checkouts.length === 0) {
+        showNotification('No checkouts to save');
+        return;
+    }
+
+    showLoading(true);
+
+    google.script.run
+        .withSuccessHandler(function(result) {
+            showLoading(false);
+            if (result.success) {
+                showNotification(`Saved ${result.count} checkouts to history`);
+            } else {
+                showError('Failed to save: ' + result.error);
+            }
+        })
+        .withFailureHandler(function(error) {
+            showLoading(false);
+            showError('Error saving to history: ' + error.message);
+        })
+        .saveCheckoutBatch(checkouts);
+}
+
+// ============================================
+// YESTERDAY'S CHECKOUTS
+// ============================================
+
+function showYesterdayModal() {
+    // Check if modal exists, create if not
+    let modal = document.getElementById('yesterdayModal');
+    if (!modal) {
+        modal = createYesterdayModal();
+        document.body.appendChild(modal);
+    }
+
+    modal.setAttribute('aria-hidden', 'false');
+    loadYesterdayCheckouts();
+}
+
+function createYesterdayModal() {
+    const modal = document.createElement('div');
+    modal.id = 'yesterdayModal';
+    modal.className = 'modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-labelledby', 'yesterdayModalTitle');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px;">
+            <button class="close" aria-label="Close dialog">&times;</button>
+            <h2 class="modal-header" id="yesterdayModalTitle">Yesterday's Checkouts</h2>
+            <div id="yesterdayDate" style="color: var(--color-text-secondary); margin-bottom: 16px;"></div>
+            <div id="yesterdayContent" style="max-height: 400px; overflow-y: auto;">
+                <p>Loading...</p>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-secondary" onclick="closeYesterdayModal()">Close</button>
+            </div>
+        </div>
+    `;
+
+    modal.querySelector('.close').addEventListener('click', closeYesterdayModal);
+
+    return modal;
+}
+
+function closeYesterdayModal() {
+    const modal = document.getElementById('yesterdayModal');
+    if (modal) {
+        modal.setAttribute('aria-hidden', 'true');
+    }
+}
+
+function loadYesterdayCheckouts() {
+    const content = document.getElementById('yesterdayContent');
+    const dateEl = document.getElementById('yesterdayDate');
+
+    if (content) {
+        content.innerHTML = '<p style="text-align: center;">Loading...</p>';
+    }
+
+    google.script.run
+        .withSuccessHandler(function(result) {
+            if (result.success) {
+                if (dateEl) {
+                    dateEl.textContent = result.date || '';
+                }
+                displayYesterdayCheckouts(result.data);
+            } else {
+                if (content) {
+                    content.innerHTML = '<p class="error-message">Failed to load: ' + result.error + '</p>';
+                }
+            }
+        })
+        .withFailureHandler(function(error) {
+            if (content) {
+                content.innerHTML = '<p class="error-message">Error: ' + error.message + '</p>';
+            }
+        })
+        .getYesterdayCheckouts();
+}
+
+function displayYesterdayCheckouts(checkouts) {
+    const content = document.getElementById('yesterdayContent');
+    if (!content) return;
+
+    if (!checkouts || checkouts.length === 0) {
+        content.innerHTML = '<p style="text-align: center; color: var(--color-text-muted);">No checkouts found for yesterday.</p>';
+        return;
+    }
+
+    // Group by crew
+    const byCrew = {};
+    checkouts.forEach(c => {
+        const crew = c.crew || 'Unknown';
+        if (!byCrew[crew]) {
+            byCrew[crew] = [];
+        }
+        byCrew[crew].push(c);
+    });
+
+    let html = '';
+    Object.keys(byCrew).sort((a, b) => parseInt(a) - parseInt(b)).forEach(crew => {
+        html += `
+            <div style="margin-bottom: 16px;">
+                <h4 style="color: var(--color-primary); margin-bottom: 8px;">Crew ${crew}</h4>
+                <ul style="list-style: none; padding: 0;">
+        `;
+        byCrew[crew].forEach(c => {
+            const statusClass = c.status === 'Returned' ? 'color: var(--color-success);' : 'color: var(--color-warning);';
+            html += `
+                <li style="padding: 8px; background: var(--color-surface-alt); border-radius: 6px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>${c.toolName}</span>
+                    <span style="font-size: 0.85em; ${statusClass}">${c.status || 'Checked Out'}</span>
+                </li>
+            `;
+        });
+        html += '</ul></div>';
+    });
+
+    content.innerHTML = html;
+}
+
+// ============================================
+// VIEW HISTORY
+// ============================================
+
+function showHistoryModal() {
+    let modal = document.getElementById('historyModal');
+    if (!modal) {
+        modal = createHistoryModal();
+        document.body.appendChild(modal);
+    }
+
+    modal.setAttribute('aria-hidden', 'false');
+    loadHistoryDates();
+}
+
+function createHistoryModal() {
+    const modal = document.createElement('div');
+    modal.id = 'historyModal';
+    modal.className = 'modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-labelledby', 'historyModalTitle');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 700px;">
+            <button class="close" aria-label="Close dialog">&times;</button>
+            <h2 class="modal-header" id="historyModalTitle">Checkout History</h2>
+            <div style="margin-bottom: 16px;">
+                <label for="historyDateSelect" style="margin-right: 8px;">Select Date:</label>
+                <select id="historyDateSelect" style="padding: 8px; border-radius: 6px; border: 1px solid var(--color-border);">
+                    <option value="">Loading dates...</option>
+                </select>
+            </div>
+            <div id="historyContent" style="max-height: 400px; overflow-y: auto;">
+                <p style="text-align: center; color: var(--color-text-muted);">Select a date to view checkouts</p>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-secondary" onclick="closeHistoryModal()">Close</button>
+            </div>
+        </div>
+    `;
+
+    modal.querySelector('.close').addEventListener('click', closeHistoryModal);
+    modal.querySelector('#historyDateSelect').addEventListener('change', function() {
+        if (this.value) {
+            loadCheckoutsForDate(this.value);
+        }
+    });
+
+    return modal;
+}
+
+function closeHistoryModal() {
+    const modal = document.getElementById('historyModal');
+    if (modal) {
+        modal.setAttribute('aria-hidden', 'true');
+    }
+}
+
+function loadHistoryDates() {
+    const select = document.getElementById('historyDateSelect');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Loading...</option>';
+
+    google.script.run
+        .withSuccessHandler(function(result) {
+            if (result.success) {
+                select.innerHTML = '<option value="">-- Select Date --</option>';
+                result.data.forEach(date => {
+                    const option = document.createElement('option');
+                    option.value = date;
+                    option.textContent = date;
+                    select.appendChild(option);
+                });
+
+                if (result.data.length === 0) {
+                    select.innerHTML = '<option value="">No history found</option>';
+                }
+            } else {
+                select.innerHTML = '<option value="">Error loading dates</option>';
+            }
+        })
+        .withFailureHandler(function(error) {
+            select.innerHTML = '<option value="">Error: ' + error.message + '</option>';
+        })
+        .getHistoryDates();
+}
+
+function loadCheckoutsForDate(dateStr) {
+    const content = document.getElementById('historyContent');
+    if (!content) return;
+
+    content.innerHTML = '<p style="text-align: center;">Loading...</p>';
+
+    google.script.run
+        .withSuccessHandler(function(result) {
+            if (result.success) {
+                displayHistoryCheckouts(result.data, dateStr);
+            } else {
+                content.innerHTML = '<p class="error-message">Failed to load: ' + result.error + '</p>';
+            }
+        })
+        .withFailureHandler(function(error) {
+            content.innerHTML = '<p class="error-message">Error: ' + error.message + '</p>';
+        })
+        .getCheckoutsByDate(dateStr);
+}
+
+function displayHistoryCheckouts(checkouts, dateStr) {
+    const content = document.getElementById('historyContent');
+    if (!content) return;
+
+    if (!checkouts || checkouts.length === 0) {
+        content.innerHTML = '<p style="text-align: center; color: var(--color-text-muted);">No checkouts found for ' + dateStr + '</p>';
+        return;
+    }
+
+    // Group by crew
+    const byCrew = {};
+    checkouts.forEach(c => {
+        const crew = c.crew || 'Unknown';
+        if (!byCrew[crew]) {
+            byCrew[crew] = [];
+        }
+        byCrew[crew].push(c);
+    });
+
+    let html = `<p style="margin-bottom: 16px; font-weight: 600;">${checkouts.length} checkout(s) on ${dateStr}</p>`;
+
+    Object.keys(byCrew).sort((a, b) => parseInt(a) - parseInt(b)).forEach(crew => {
+        html += `
+            <div style="margin-bottom: 16px;">
+                <h4 style="color: var(--color-primary); margin-bottom: 8px;">Crew ${crew}</h4>
+                <ul style="list-style: none; padding: 0;">
+        `;
+        byCrew[crew].forEach(c => {
+            const statusClass = c.status === 'Returned' ? 'color: var(--color-success);' : 'color: var(--color-warning);';
+            html += `
+                <li style="padding: 8px; background: var(--color-surface-alt); border-radius: 6px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <span>${c.toolName}</span>
+                        <span style="font-size: 0.8em; color: var(--color-text-muted); margin-left: 8px;">${c.time || ''}</span>
+                    </div>
+                    <span style="font-size: 0.85em; ${statusClass}">${c.status || 'Checked Out'}</span>
+                </li>
+            `;
+        });
+        html += '</ul></div>';
+    });
+
+    content.innerHTML = html;
+}
+
+// ============================================
+// ADD TOOL MODAL
+// ============================================
+
+function showAddModal() {
+    const modal = document.getElementById('addModal');
+    if (modal) {
+        modal.setAttribute('aria-hidden', 'false');
+        document.getElementById('toolName')?.focus();
+    }
+}
+
+function closeAddModal() {
+    const modal = document.getElementById('addModal');
+    if (modal) {
+        modal.setAttribute('aria-hidden', 'true');
+        document.getElementById('toolName').value = '';
+        document.getElementById('toolQuantity').value = '1';
+    }
+}
+
+function addNewTool() {
+    const name = document.getElementById('toolName')?.value.trim();
+    const category = document.getElementById('toolCategory')?.value;
+    const qty = parseInt(document.getElementById('toolQuantity')?.value) || 1;
+
+    if (!name) {
+        alert('Please enter a tool name');
+        return;
+    }
+
+    const classMap = {
+        'hammers': 'hammer',
+        'drivers': 'screwdriver',
+        'measuring': 'measuring',
+        'cutting': 'cutting',
+        'pliers': 'pliers',
+        'batteries': 'battery',
+        'power': 'power-tool',
+        'safety': 'safety',
+        'misc': 'misc'
+    };
+
+    const newTool = {
+        name: name,
+        qty: qty,
+        class: classMap[category] || 'misc'
+    };
+
+    // Add to local inventory
+    if (!toolInventory[category]) {
+        toolInventory[category] = [];
+    }
+    toolInventory[category].push(newTool);
+
+    // Create the tool stack
+    const pool = document.getElementById(category + 'Pool');
+    if (pool) {
+        createToolStack(newTool, pool);
+        setupDragEvents();
+    }
+
+    closeAddModal();
+    updateLastModifiedTime();
+    saveSchedule();
+}
+
+// ============================================
+// CLEAR CHECKOUTS
+// ============================================
+
+function clearAllCheckouts() {
+    if (!confirm('Clear all tool checkouts and reset? This will clear today\'s checkouts from the sheet.')) return;
+
+    showLoading(true);
+
+    google.script.run
+        .withSuccessHandler(function(result) {
+            showLoading(false);
+
+            // Reset UI
+            document.querySelectorAll('.drop-zone[data-crew]').forEach(zone => {
+                zone.innerHTML = '';
+            });
+
+            document.querySelectorAll('.draggable.checked-out').forEach(tool => {
+                tool.classList.remove('checked-out');
+                tool.style.display = '';
+            });
+
+            document.querySelectorAll('.tool-stack').forEach(stack => {
+                updateStackCount(stack);
+            });
+
+            updateLastModifiedTime();
+            showNotification('All checkouts cleared');
+        })
+        .withFailureHandler(function(error) {
+            showLoading(false);
+            showError('Error clearing checkouts: ' + error.message);
+        })
+        .clearTodayCheckouts();
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+function updateLastModifiedTime() {
+    const now = new Date();
+    const timeString = now.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+
+    const updateEl = document.getElementById('updateTime');
+    if (updateEl) {
+        updateEl.textContent = `Last Updated: ${timeString}`;
+    }
+
+    localStorage.setItem('toolLastUpdateTime', timeString);
+}
+
+function updateStatus(message) {
+    const updateEl = document.getElementById('updateTime');
+    if (updateEl) {
+        updateEl.textContent = message;
+    }
+}
+
+function showLoading(show) {
+    isLoading = show;
+    document.body.classList.toggle('loading', show);
+}
+
+function showError(message) {
+    console.error(message);
+    alert(message);
+}
+
+function showNotification(message) {
+    // Simple notification - could be enhanced with a toast component
+    const updateEl = document.getElementById('updateTime');
+    if (updateEl) {
+        const originalText = updateEl.textContent;
+        updateEl.textContent = message;
+        updateEl.style.background = 'var(--color-success-light)';
+        updateEl.style.borderColor = 'var(--color-success)';
+        setTimeout(() => {
+            updateEl.textContent = originalText;
+            updateEl.style.background = '';
+            updateEl.style.borderColor = '';
+        }, 3000);
+    }
+}
+</script>

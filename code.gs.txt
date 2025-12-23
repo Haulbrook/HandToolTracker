@@ -1,0 +1,600 @@
+/**
+ * Hand Tool Tracker - Google Apps Script
+ * Deep Roots Operations
+ * Connected to Google Sheets for inventory and history
+ */
+
+// ============================================
+// CONFIGURATION
+// ============================================
+const SPREADSHEET_ID = '1AmyIFL74or_Nh0QLMu_n18YosrSP9E4EA6k5MTzlq1Y';
+const INVENTORY_SHEET_NAME = 'Inventory';  // Tab name for inventory
+const HISTORY_SHEET_NAME = 'Checkouts';     // Tab name for checkout history
+
+// ============================================
+// WEB APP FUNCTIONS
+// ============================================
+
+/**
+ * Serves the main HTML page when accessing the web app
+ */
+function doGet() {
+  return HtmlService.createTemplateFromFile('Index')
+    .evaluate()
+    .setTitle('Daily Tool Checkout System')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * Include partial HTML files (for CSS and JS)
+ * @param {string} filename - The name of the HTML file to include
+ * @return {string} The content of the file
+ */
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+// ============================================
+// INVENTORY FUNCTIONS
+// ============================================
+
+/**
+ * Get all tools from the Inventory sheet
+ * @return {Object} Tool inventory organized by category
+ */
+function getInventory() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(INVENTORY_SHEET_NAME);
+
+    if (!sheet) {
+      throw new Error('Inventory sheet not found: ' + INVENTORY_SHEET_NAME);
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0]; // First row is headers
+
+    // Find column indices
+    const toolNameIdx = headers.indexOf('Tool Name');
+    const categoryIdx = headers.indexOf('Category');
+    const quantityIdx = headers.indexOf('Quantity');
+    const availableIdx = headers.indexOf('Available');
+    const statusIdx = headers.indexOf('Status');
+
+    // Category mapping for CSS classes
+    const categoryClassMap = {
+      'hammers': 'hammer',
+      'hammers & impact': 'hammer',
+      'drivers': 'screwdriver',
+      'drivers & bits': 'screwdriver',
+      'measuring': 'measuring',
+      'measuring & layout': 'measuring',
+      'cutting': 'cutting',
+      'cutting tools': 'cutting',
+      'pliers': 'pliers',
+      'pliers & wrenches': 'pliers',
+      'batteries': 'battery',
+      'batteries & chargers': 'battery',
+      'power': 'power-tool',
+      'power tools': 'power-tool',
+      'safety': 'safety',
+      'safety equipment': 'safety',
+      'misc': 'misc',
+      'miscellaneous': 'misc'
+    };
+
+    // Category mapping for pool IDs
+    const categoryPoolMap = {
+      'hammers': 'hammers',
+      'hammers & impact': 'hammers',
+      'drivers': 'drivers',
+      'drivers & bits': 'drivers',
+      'measuring': 'measuring',
+      'measuring & layout': 'measuring',
+      'cutting': 'cutting',
+      'cutting tools': 'cutting',
+      'pliers': 'pliers',
+      'pliers & wrenches': 'pliers',
+      'batteries': 'batteries',
+      'batteries & chargers': 'batteries',
+      'power': 'power',
+      'power tools': 'power',
+      'safety': 'safety',
+      'safety equipment': 'safety',
+      'misc': 'misc',
+      'miscellaneous': 'misc'
+    };
+
+    const inventory = {
+      hammers: [],
+      drivers: [],
+      measuring: [],
+      cutting: [],
+      pliers: [],
+      batteries: [],
+      power: [],
+      safety: [],
+      misc: []
+    };
+
+    // Skip header row, process data
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const toolName = row[toolNameIdx];
+      const category = row[categoryIdx] ? row[categoryIdx].toString().toLowerCase() : '';
+      const quantity = parseInt(row[quantityIdx]) || 1;
+      const status = row[statusIdx] ? row[statusIdx].toString().toLowerCase() : 'active';
+
+      // Skip empty rows or inactive tools
+      if (!toolName || status === 'inactive' || status === 'retired') {
+        continue;
+      }
+
+      const poolKey = categoryPoolMap[category] || 'misc';
+      const cssClass = categoryClassMap[category] || 'misc';
+
+      inventory[poolKey].push({
+        name: toolName,
+        qty: quantity,
+        class: cssClass
+      });
+    }
+
+    return { success: true, data: inventory };
+
+  } catch (error) {
+    console.error('Error getting inventory:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Update available count for a tool in inventory
+ * @param {string} toolName - Name of the tool
+ * @param {number} available - New available count
+ */
+function updateToolAvailability(toolName, available) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(INVENTORY_SHEET_NAME);
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const toolNameIdx = headers.indexOf('Tool Name');
+    const availableIdx = headers.indexOf('Available');
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][toolNameIdx] === toolName) {
+        sheet.getRange(i + 1, availableIdx + 1).setValue(available);
+        break;
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating availability:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================
+// CHECKOUT HISTORY FUNCTIONS
+// ============================================
+
+/**
+ * Save a checkout record to the History sheet
+ * @param {Object} checkout - Checkout details
+ */
+function saveCheckout(checkout) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sheet = ss.getSheetByName(HISTORY_SHEET_NAME);
+
+    // Create sheet if it doesn't exist
+    if (!sheet) {
+      sheet = ss.insertSheet(HISTORY_SHEET_NAME);
+      sheet.appendRow(['Tool Name', 'Crew', 'Checked Out By', 'Date', 'Time', 'Status']);
+    }
+
+    const now = new Date();
+    const date = Utilities.formatDate(now, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+    const time = Utilities.formatDate(now, Session.getScriptTimeZone(), 'hh:mm a');
+
+    sheet.appendRow([
+      checkout.toolName,
+      checkout.crew,
+      checkout.checkedOutBy || '',
+      date,
+      time,
+      checkout.status || 'Checked Out'
+    ]);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving checkout:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Save multiple checkouts at once (batch save)
+ * @param {Array} checkouts - Array of checkout objects
+ */
+function saveCheckoutBatch(checkouts) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sheet = ss.getSheetByName(HISTORY_SHEET_NAME);
+
+    if (!sheet) {
+      sheet = ss.insertSheet(HISTORY_SHEET_NAME);
+      sheet.appendRow(['Tool Name', 'Crew', 'Checked Out By', 'Date', 'Time', 'Status']);
+    }
+
+    const now = new Date();
+    const date = Utilities.formatDate(now, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+    const time = Utilities.formatDate(now, Session.getScriptTimeZone(), 'hh:mm a');
+
+    const rows = checkouts.map(checkout => [
+      checkout.toolName,
+      checkout.crew,
+      checkout.checkedOutBy || '',
+      date,
+      time,
+      checkout.status || 'Checked Out'
+    ]);
+
+    if (rows.length > 0) {
+      sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 6).setValues(rows);
+    }
+
+    return { success: true, count: rows.length };
+  } catch (error) {
+    console.error('Error saving checkout batch:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Update checkout status (e.g., mark as returned)
+ * @param {string} toolName - Name of the tool
+ * @param {string} crew - Crew number
+ * @param {string} newStatus - New status (e.g., 'Returned')
+ */
+function updateCheckoutStatus(toolName, crew, newStatus) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(HISTORY_SHEET_NAME);
+
+    if (!sheet) {
+      return { success: false, error: 'History sheet not found' };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const toolNameIdx = headers.indexOf('Tool Name');
+    const crewIdx = headers.indexOf('Crew');
+    const statusIdx = headers.indexOf('Status');
+
+    // Find the most recent checkout for this tool/crew that's still checked out
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (data[i][toolNameIdx] === toolName &&
+          data[i][crewIdx].toString() === crew.toString() &&
+          data[i][statusIdx] === 'Checked Out') {
+        sheet.getRange(i + 1, statusIdx + 1).setValue(newStatus);
+        break;
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating checkout status:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get yesterday's checkouts
+ * @return {Object} Checkouts from yesterday
+ */
+function getYesterdayCheckouts() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(HISTORY_SHEET_NAME);
+
+    if (!sheet) {
+      return { success: true, data: [] };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const dateIdx = headers.indexOf('Date');
+
+    // Calculate yesterday's date
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = Utilities.formatDate(yesterday, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+
+    const checkouts = [];
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const rowDate = row[dateIdx];
+
+      // Handle both Date objects and strings
+      let dateStr;
+      if (rowDate instanceof Date) {
+        dateStr = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+      } else {
+        dateStr = rowDate.toString();
+      }
+
+      if (dateStr === yesterdayStr) {
+        checkouts.push({
+          toolName: row[headers.indexOf('Tool Name')],
+          crew: row[headers.indexOf('Crew')],
+          checkedOutBy: row[headers.indexOf('Checked Out By')],
+          date: dateStr,
+          time: row[headers.indexOf('Time')],
+          status: row[headers.indexOf('Status')]
+        });
+      }
+    }
+
+    return { success: true, data: checkouts, date: yesterdayStr };
+  } catch (error) {
+    console.error('Error getting yesterday checkouts:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get today's checkouts
+ * @return {Object} Checkouts from today
+ */
+function getTodayCheckouts() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(HISTORY_SHEET_NAME);
+
+    if (!sheet) {
+      return { success: true, data: [] };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const dateIdx = headers.indexOf('Date');
+
+    const today = new Date();
+    const todayStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+
+    const checkouts = [];
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const rowDate = row[dateIdx];
+
+      let dateStr;
+      if (rowDate instanceof Date) {
+        dateStr = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+      } else {
+        dateStr = rowDate.toString();
+      }
+
+      if (dateStr === todayStr) {
+        checkouts.push({
+          toolName: row[headers.indexOf('Tool Name')],
+          crew: row[headers.indexOf('Crew')],
+          checkedOutBy: row[headers.indexOf('Checked Out By')],
+          date: dateStr,
+          time: row[headers.indexOf('Time')],
+          status: row[headers.indexOf('Status')]
+        });
+      }
+    }
+
+    return { success: true, data: checkouts, date: todayStr };
+  } catch (error) {
+    console.error('Error getting today checkouts:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get checkout history for a date range
+ * @param {number} days - Number of days to look back (default 7)
+ * @return {Object} Checkout history
+ */
+function getCheckoutHistory(days) {
+  try {
+    days = days || 7;
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(HISTORY_SHEET_NAME);
+
+    if (!sheet) {
+      return { success: true, data: [] };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const dateIdx = headers.indexOf('Date');
+
+    // Calculate the cutoff date
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    cutoffDate.setHours(0, 0, 0, 0);
+
+    const checkouts = [];
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const rowDate = row[dateIdx];
+
+      let date;
+      if (rowDate instanceof Date) {
+        date = rowDate;
+      } else {
+        date = new Date(rowDate);
+      }
+
+      if (date >= cutoffDate) {
+        checkouts.push({
+          toolName: row[headers.indexOf('Tool Name')],
+          crew: row[headers.indexOf('Crew')],
+          checkedOutBy: row[headers.indexOf('Checked Out By')],
+          date: Utilities.formatDate(date, Session.getScriptTimeZone(), 'MM/dd/yyyy'),
+          time: row[headers.indexOf('Time')],
+          status: row[headers.indexOf('Status')]
+        });
+      }
+    }
+
+    // Sort by date descending (most recent first)
+    checkouts.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return { success: true, data: checkouts };
+  } catch (error) {
+    console.error('Error getting checkout history:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get all unique dates in history for the date picker
+ * @return {Object} List of unique dates
+ */
+function getHistoryDates() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(HISTORY_SHEET_NAME);
+
+    if (!sheet) {
+      return { success: true, data: [] };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const dateIdx = headers.indexOf('Date');
+
+    const dates = new Set();
+
+    for (let i = 1; i < data.length; i++) {
+      const rowDate = data[i][dateIdx];
+      if (rowDate) {
+        let dateStr;
+        if (rowDate instanceof Date) {
+          dateStr = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+        } else {
+          dateStr = rowDate.toString();
+        }
+        dates.add(dateStr);
+      }
+    }
+
+    // Convert to array and sort descending
+    const dateArray = Array.from(dates).sort((a, b) => new Date(b) - new Date(a));
+
+    return { success: true, data: dateArray };
+  } catch (error) {
+    console.error('Error getting history dates:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get checkouts for a specific date
+ * @param {string} dateStr - Date string in MM/dd/yyyy format
+ * @return {Object} Checkouts for that date
+ */
+function getCheckoutsByDate(dateStr) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(HISTORY_SHEET_NAME);
+
+    if (!sheet) {
+      return { success: true, data: [] };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const dateIdx = headers.indexOf('Date');
+
+    const checkouts = [];
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const rowDate = row[dateIdx];
+
+      let rowDateStr;
+      if (rowDate instanceof Date) {
+        rowDateStr = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+      } else {
+        rowDateStr = rowDate.toString();
+      }
+
+      if (rowDateStr === dateStr) {
+        checkouts.push({
+          toolName: row[headers.indexOf('Tool Name')],
+          crew: row[headers.indexOf('Crew')],
+          checkedOutBy: row[headers.indexOf('Checked Out By')],
+          date: rowDateStr,
+          time: row[headers.indexOf('Time')],
+          status: row[headers.indexOf('Status')]
+        });
+      }
+    }
+
+    return { success: true, data: checkouts, date: dateStr };
+  } catch (error) {
+    console.error('Error getting checkouts by date:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Clear today's checkouts (for reset)
+ */
+function clearTodayCheckouts() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(HISTORY_SHEET_NAME);
+
+    if (!sheet) {
+      return { success: true };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const dateIdx = headers.indexOf('Date');
+
+    const today = new Date();
+    const todayStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+
+    // Find rows to delete (work backwards to avoid index issues)
+    const rowsToDelete = [];
+    for (let i = data.length - 1; i >= 1; i--) {
+      const rowDate = data[i][dateIdx];
+      let dateStr;
+      if (rowDate instanceof Date) {
+        dateStr = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+      } else {
+        dateStr = rowDate.toString();
+      }
+
+      if (dateStr === todayStr) {
+        rowsToDelete.push(i + 1); // +1 for 1-based sheet rows
+      }
+    }
+
+    // Delete rows (already in reverse order)
+    rowsToDelete.forEach(rowNum => {
+      sheet.deleteRow(rowNum);
+    });
+
+    return { success: true, deleted: rowsToDelete.length };
+  } catch (error) {
+    console.error('Error clearing today checkouts:', error);
+    return { success: false, error: error.message };
+  }
+}

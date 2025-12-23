@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Daily Tool Checkout System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            padding: 10px;
+            overflow-x: auto;
+        }
+
+        .container {
+            min-width: 1200px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        h1 {
+            color: #2d3436;
+            font-size: 1.8em;
+        }
+
+        .header-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .date-header {
+            color: #636e72;
+            font-size: 1em;
+        }
+
+        .update-time {
+            background: #fff3cd;
+            color: #856404;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            font-weight: 600;
+            border: 1px solid #ffc107;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 18px;
+            font-size: 0.95em;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-appearance: none;
+            touch-action: manipulation;
+            min-height: 44px;
+        }
+
+        .btn-save {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-clear {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-print {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-add {
+            background: #9c88ff;
+            color: white;
+        }
+
+        .btn-return-all {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-expand {
+            background: #00b894;
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .resources-bar {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1.5fr 1.5fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .resource-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .resource-section h3 {
+            color: #495057;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .resource-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            min-height: 70px;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+            border: 2px dashed #dee2e6;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        #brokenPool {
+            background: #ffe0e0;
+            border-color: #ff9999;
+        }
+
+        .draggable {
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: move;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .draggable:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .draggable.dragging {
+            opacity: 0.5;
+        }
+
+        .draggable.broken {
+            opacity: 0.6;
+            background: repeating-linear-gradient(
+                45deg,
+                #ff6b6b,
+                #ff6b6b 5px,
+                #ff9999 5px,
+                #ff9999 10px
+            ) !important;
+            color: white !important;
+        }
+
+        /* Tool stack styling */
+        .tool-stack {
+            position: relative;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .tool-stack.expanded {
+            display: inline-block;
+        }
+
+        .tool-stack .stack-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #2d3436;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        .tool-stack .tool-item {
+            display: none;
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+
+        .tool-stack.expanded .tool-item {
+            display: inline-block;
+        }
+
+        .tool-stack.expanded .stack-label {
+            display: none;
+        }
+
+        /* Tool type colors */
+        .hammer { background: #e17055; color: white; }
+        .screwdriver { background: #00b894; color: white; }
+        .battery { background: #fdcb6e; color: #333; }
+        .power-tool { background: #6c5ce7; color: white; }
+        .measuring { background: #0984e3; color: white; }
+        .cutting { background: #d63031; color: white; }
+        .pliers { background: #a29bfe; color: white; }
+        .fastening { background: #00cec9; color: white; }
+        .safety { background: #fd79a8; color: white; }
+        .misc { background: #636e72; color: white; }
+
+        .crews-container {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .crew-card {
+            flex: 0 0 190px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .crew-header {
+            padding: 10px;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            font-size: 1em;
+        }
+
+        .crew-1 .crew-header { background: #9c88ff; }
+        .crew-2 .crew-header { background: #00a8ff; }
+        .crew-3 .crew-header { background: #fbc531; }
+        .crew-4 .crew-header { background: #4cd137; }
+        .crew-5 .crew-header { background: #e84393; }
+        .crew-6 .crew-header { background: #00d2d3; }
+
+        .crew-body {
+            padding: 10px;
+        }
+
+        .crew-section {
+            margin-bottom: 10px;
+        }
+
+        .crew-section-title {
+            font-size: 0.75em;
+            color: #6c757d;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .drop-zone {
+            min-height: 35px;
+            padding: 6px;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 5px;
+            font-size: 0.8em;
+        }
+
+        .drop-zone.drag-over {
+            background: #e3f2fd;
+            border-color: #2196F3;
+        }
+
+        .drop-zone .draggable {
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .checkout-time {
+            font-size: 0.65em;
+            color: #6c757d;
+            margin-left: 5px;
+        }
+
+        .return-btn {
+            float: right;
+            padding: 2px 6px;
+            background: #28a745;
+            color: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.7em;
+        }
+
+        .return-btn:hover {
+            background: #218838;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 400px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #2d3436;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 0.95em;
+        }
+
+        .form-group input[type="number"] {
+            width: 80px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 8px 20px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        /* Scrollbar styling */
+        .resource-items::-webkit-scrollbar,
+        .crews-container::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .resource-items::-webkit-scrollbar-track,
+        .crews-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .resource-items::-webkit-scrollbar-thumb,
+        .crews-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+
+        .resource-items::-webkit-scrollbar-thumb:hover,
+        .crews-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .resources-bar, .action-buttons {
+                display: none;
+            }
+            .crews-container {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+            }
+            .crew-card {
+                flex: unset;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Daily Tool Checkout</h1>
+            <div class="header-info">
+                <div class="date-header" id="currentDate"></div>
+                <div class="update-time" id="updateTime">Last Updated: Never</div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-expand" onclick="toggleExpandAll()">↔️ Expand All</button>
+                <button class="btn-add" onclick="showAddModal()">➕ Add Tool</button>
+                <button class="btn-return-all" onclick="returnAllTools()">↩️ Return All</button>
+                <button class="btn-save" onclick="saveSchedule()">💾 Save</button>
+                <button class="btn-clear" onclick="clearAllCheckouts()">🔄 Clear</button>
+                <button class="btn-print" onclick="printSchedule()">🖨️ Print</button>
+            </div>
+        </div>
+
+        <div class="resources-bar">
+            <div class="resource-section">
+                <h3>🔨 Hammers & Impact</h3>
+                <div class="resource-items" id="hammersPool"></div>
+            </div>
+
+            <div class="resource-section">
+                <h3>🔧 Drivers & Bits</h3>
+                <div class="resource-items" id="driversPool"></div>
+            </div>
+
+            <div class="resource-section">
+                <h3>📐 Measuring & Layout</h3>
+                <div class="resource-items" id="measuringPool"></div>
+            </div>
+
+            <div class="resource-section">
+                <h3>✂️ Cutting Tools</h3>
+                <div class="resource-items" id="cuttingPool"></div>
+            </div>
+
+            <div class="resource-section">
+                <h3>🔗 Pliers & Wrenches</h3>
+                <div class="resource-items" id="pliersPool"></div>
+            </div>
+
+            <div class="resource-section">
+                <h3>⚠️ Broken/Missing</h3>
+                <div class="resource-items drop-zone" id="brokenPool"></div>
+            </div>
+        </div>
+
+        <div class="resources-bar">
+            <div class="resource-section">
+                <h3>🔋 Batteries & Chargers</h3>
+                <div class="resource-items" id="batteriesPool"></div>
+            </div>
+
+            <div class="resource-section">
+                <h3>⚡ Power Tools</h3>
+                <div class="resource-items" id="powerPool"></div>
+            </div>
+
+            <div class="resource-section">
+                <h3>🦺 Safety Equipment</h3>
+                <div class="resource-items" id="safetyPool"></div>
+            </div>
+
+            <div class="resource-section" style="grid-column: span 3;">
+                <h3>📦 Miscellaneous</h3>
+                <div class="resource-items" id="miscPool"></div>
+            </div>
+        </div>
+
+        <h2 style="margin: 20px 0 15px; color: #2d3436;">Tool Checkouts by Crew</h2>
+        <div class="crews-container" id="crewsContainer">
+            <!-- Crews will be generated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Add Tool Modal -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddModal()">&times;</span>
+            <h2 class="modal-header">Add New Tool</h2>
+            <div class="form-group">
+                <label for="toolName">Tool Name:</label>
+                <input type="text" id="toolName" placeholder="Enter tool name...">
+            </div>
+            <div class="form-group">
+                <label for="toolCategory">Category:</label>
+                <select id="toolCategory">
+                    <option value="hammers">Hammers & Impact</option>
+                    <option value="drivers">Drivers & Bits</option>
+                    <option value="measuring">Measuring & Layout</option>
+                    <option value="cutting">Cutting Tools</option>
+                    <option value="pliers">Pliers & Wrenches</option>
+                    <option value="batteries">Batteries & Chargers</option>
+                    <option value="power">Power Tools</option>
+                    <option value="safety">Safety Equipment</option>
+                    <option value="misc">Miscellaneous</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="toolQuantity">Quantity:</label>
+                <input type="number" id="toolQuantity" min="1" value="1">
+            </div>
+            <div class="modal-buttons">
+                <button onclick="closeAddModal()" style="background: #6c757d; color: white;">Cancel</button>
+                <button onclick="addNewTool()" style="background: #4CAF50; color: white;">Add Tool</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tool inventory with quantities
+        const toolInventory = {
+            hammers: [
+                { name: 'Claw Hammer', qty: 8, class: 'hammer' },
+                { name: 'Mini Sledge', qty: 4, class: 'hammer' },
+                { name: 'Dead Blow', qty: 3, class: 'hammer' },
+                { name: 'Framing Hammer', qty: 6, class: 'hammer' }
+            ],
+            drivers: [
+                { name: 'Phillips Screwdriver', qty: 10, class: 'screwdriver' },
+                { name: 'Flathead Screwdriver', qty: 10, class: 'screwdriver' },
+                { name: 'Impact Bit Set', qty: 6, class: 'screwdriver' },
+                { name: 'Multi-bit Driver', qty: 6, class: 'screwdriver' }
+            ],
+            measuring: [
+                { name: 'Level 2ft', qty: 6, class: 'measuring' },
+                { name: 'Level 4ft', qty: 4, class: 'measuring' },
+                { name: 'Framing Square', qty: 5, class: 'measuring' },
+                { name: 'Chalk Line', qty: 8, class: 'measuring' },
+                { name: 'String Line', qty: 10, class: 'measuring' },
+                { name: 'Tape Measure', qty: 15, class: 'measuring' }
+            ],
+            cutting: [
+                { name: 'Machete', qty: 4, class: 'cutting' },
+                { name: 'Utility Knife', qty: 12, class: 'cutting' },
+                { name: 'Hacksaw', qty: 4, class: 'cutting' },
+                { name: 'Tin Snips', qty: 6, class: 'cutting' }
+            ],
+            pliers: [
+                { name: 'Pliers', qty: 10, class: 'pliers' },
+                { name: 'Needle Nose Pliers', qty: 8, class: 'pliers' },
+                { name: 'Wire Strippers', qty: 6, class: 'pliers' },
+                { name: 'Wrench Set', qty: 5, class: 'fastening' },
+                { name: 'Adjustable Wrench', qty: 6, class: 'fastening' }
+            ],
+            batteries: [
+                { name: 'DeWalt 20V Battery', qty: 12, class: 'battery' },
+                { name: 'Milwaukee M18 Battery', qty: 8, class: 'battery' },
+                { name: 'Battery Charger', qty: 4, class: 'battery' }
+            ],
+            power: [
+                { name: 'Paint Gun', qty: 2, class: 'power-tool' },
+                { name: 'Impact Driver', qty: 6, class: 'power-tool' },
+                { name: 'Drill', qty: 8, class: 'power-tool' },
+                { name: 'Circular Saw', qty: 4, class: 'power-tool' }
+            ],
+            safety: [
+                { name: 'Safety Glasses', qty: 20, class: 'safety' },
+                { name: 'Work Gloves', qty: 30, class: 'safety' },
+                { name: 'Ear Protection', qty: 15, class: 'safety' }
+            ],
+            misc: [
+                { name: 'Tool Belt', qty: 10, class: 'misc' },
+                { name: 'Extension Cord', qty: 6, class: 'misc' },
+                { name: 'Work Light', qty: 5, class: 'misc' }
+            ]
+        };
+
+        let draggedElement = null;
+        let expandedStacks = new Set();
+
+        // Initialize date
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric'
+        });
+
+        // Update time functions
+        function updateLastModifiedTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('en-US', { 
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('updateTime').textContent = `Last Updated: ${timeString}`;
+            localStorage.setItem('toolLastUpdateTime', timeString);
+        }
+
+        function loadLastUpdateTime() {
+            const savedTime = localStorage.getItem('toolLastUpdateTime');
+            if (savedTime) {
+                document.getElementById('updateTime').textContent = `Last Updated: ${savedTime}`;
+            }
+        }
+
+        // Create tool stacks
+        function createToolStack(tool, poolId) {
+            const pool = document.getElementById(poolId);
+            
+            if (tool.qty === 1) {
+                // Single tool, no stack needed
+                const toolDiv = document.createElement('div');
+                toolDiv.className = `draggable ${tool.class}`;
+                toolDiv.draggable = true;
+                toolDiv.textContent = `${tool.name} #1`;
+                toolDiv.dataset.toolName = tool.name;
+                toolDiv.dataset.toolNumber = '1';
+                pool.appendChild(toolDiv);
+            } else {
+                // Create stack for multiple tools
+                const stackDiv = document.createElement('div');
+                stackDiv.className = 'tool-stack';
+                stackDiv.dataset.toolName = tool.name;
+                
+                // Stack label (shows when collapsed)
+                const stackLabel = document.createElement('div');
+                stackLabel.className = `draggable ${tool.class} stack-label`;
+                stackLabel.draggable = false;
+                stackLabel.textContent = tool.name;
+                stackDiv.appendChild(stackLabel);
+                
+                // Stack count badge
+                const countBadge = document.createElement('span');
+                countBadge.className = 'stack-count';
+                countBadge.textContent = tool.qty;
+                stackLabel.appendChild(countBadge);
+                
+                // Individual tool items (hidden by default)
+                for (let i = 1; i <= tool.qty; i++) {
+                    const toolDiv = document.createElement('div');
+                    toolDiv.className = `draggable ${tool.class} tool-item`;
+                    toolDiv.draggable = true;
+                    toolDiv.textContent = `${tool.name} #${i}`;
+                    toolDiv.dataset.toolName = tool.name;
+                    toolDiv.dataset.toolNumber = i;
+                    stackDiv.appendChild(toolDiv);
+                }
+                
+                // Touch-friendly expand/collapse for iOS
+                function toggleStack(e) {
+                    if (!e.target.classList.contains('tool-item')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        stackDiv.classList.toggle('expanded');
+                        if (stackDiv.classList.contains('expanded')) {
+                            expandedStacks.add(tool.name);
+                        } else {
+                            expandedStacks.delete(tool.name);
+                        }
+                        updateStackCount(stackDiv);
+                    }
+                }
+                
+                // Add both touch and click events for iOS compatibility
+                stackDiv.addEventListener('click', toggleStack);
+                stackDiv.addEventListener('touchend', function(e) {
+                    if (!e.target.classList.contains('tool-item')) {
+                        e.preventDefault();
+                        toggleStack(e);
+                    }
+                });
+                
+                pool.appendChild(stackDiv);
+            }
+        }
+
+        function updateStackCount(stackDiv) {
+            const availableCount = stackDiv.querySelectorAll('.tool-item:not(.checked-out)').length;
+            const countBadge = stackDiv.querySelector('.stack-count');
+            if (countBadge) {
+                countBadge.textContent = availableCount;
+                if (availableCount === 0) {
+                    stackDiv.style.display = 'none';
+                } else {
+                    stackDiv.style.display = '';
+                }
+            }
+        }
+
+        // Initialize inventory
+        function initializeInventory() {
+            // Clear pools first
+            const pools = ['hammersPool', 'driversPool', 'measuringPool', 'cuttingPool', 
+                          'pliersPool', 'batteriesPool', 'powerPool', 'safetyPool', 'miscPool'];
+            pools.forEach(poolId => {
+                document.getElementById(poolId).innerHTML = '';
+            });
+            
+            // Create tool stacks for each category
+            Object.entries(toolInventory).forEach(([category, tools]) => {
+                const poolId = category + 'Pool';
+                tools.forEach(tool => {
+                    createToolStack(tool, poolId);
+                });
+            });
+            
+            // Setup drag events
+            setupDragEvents();
+        }
+
+        // Create crew cards
+        function createCrewCards() {
+            const crewsContainer = document.getElementById('crewsContainer');
+            crewsContainer.innerHTML = '';
+            
+            for (let i = 1; i <= 8; i++) {
+                const crewCard = document.createElement('div');
+                crewCard.className = `crew-card crew-${i > 6 ? i - 6 : i}`;
+                crewCard.innerHTML = `
+                    <div class="crew-header">Crew ${i}</div>
+                    <div class="crew-body">
+                        <div class="crew-section">
+                            <div class="crew-section-title">Checked Out Tools</div>
+                            <div class="drop-zone" data-crew="${i}"></div>
+                        </div>
+                    </div>
+                `;
+                crewsContainer.appendChild(crewCard);
+            }
+        }
+
+        // Setup drag events
+        function setupDragEvents() {
+            document.querySelectorAll('.draggable').forEach(element => {
+                element.addEventListener('dragstart', handleDragStart);
+                element.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        // Drag handlers
+        function handleDragStart(e) {
+            if (e.target.classList.contains('draggable') && !e.target.classList.contains('stack-label')) {
+                draggedElement = e.target;
+                e.target.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            }
+        }
+
+        function handleDragEnd(e) {
+            if (e.target.classList.contains('draggable')) {
+                e.target.classList.remove('dragging');
+            }
+        }
+
+        // Setup global drag events
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        document.addEventListener('dragenter', (e) => {
+            if (e.target.classList.contains('drop-zone') || e.target.classList.contains('resource-items')) {
+                e.target.classList.add('drag-over');
+            }
+        });
+
+        document.addEventListener('dragleave', (e) => {
+            if (e.target.classList.contains('drop-zone') || e.target.classList.contains('resource-items')) {
+                e.target.classList.remove('drag-over');
+            }
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            
+            let dropZone = e.target;
+            
+            if (!dropZone.classList.contains('drop-zone') && !dropZone.classList.contains('resource-items')) {
+                dropZone = e.target.closest('.drop-zone') || e.target.closest('.resource-items');
+            }
+            
+            if (dropZone && draggedElement) {
+                dropZone.classList.remove('drag-over');
+                
+                // If checking out to a crew
+                if (dropZone.dataset.crew) {
+                    const time = new Date().toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    
+                    // Add checkout time and return button
+                    const wrapper = document.createElement('div');
+                    wrapper.style.width = '100%';
+                    wrapper.innerHTML = `
+                        <span class="return-btn" onclick="returnTool(this)">Return</span>
+                        ${draggedElement.textContent}
+                        <span class="checkout-time">${time}</span>
+                    `;
+                    
+                    draggedElement.classList.add('checked-out');
+                    draggedElement.style.display = 'none';
+                    draggedElement.dataset.checkoutTime = time;
+                    draggedElement.dataset.crew = dropZone.dataset.crew;
+                    
+                    wrapper.dataset.originalTool = draggedElement.dataset.toolName;
+                    wrapper.dataset.toolNumber = draggedElement.dataset.toolNumber;
+                    
+                    dropZone.appendChild(wrapper);
+                    
+                    // Update stack count if part of a stack
+                    const stack = draggedElement.closest('.tool-stack');
+                    if (stack) {
+                        updateStackCount(stack);
+                    }
+                }
+                // If moving to broken pool
+                else if (dropZone.id === 'brokenPool') {
+                    draggedElement.classList.add('broken');
+                    dropZone.appendChild(draggedElement);
+                }
+                // Return to pool
+                else if (dropZone.classList.contains('resource-items')) {
+                    draggedElement.classList.remove('broken');
+                    dropZone.appendChild(draggedElement);
+                }
+                
+                updateLastModifiedTime();
+            }
+        });
+
+        // Return individual tool
+        function returnTool(btn) {
+            const wrapper = btn.parentElement;
+            const toolName = wrapper.dataset.originalTool;
+            const toolNumber = wrapper.dataset.toolNumber;
+            
+            // Find the original tool element
+            const originalTool = document.querySelector(`.draggable[data-tool-name="${toolName}"][data-tool-number="${toolNumber}"]`);
+            if (originalTool) {
+                originalTool.classList.remove('checked-out');
+                originalTool.style.display = '';
+                delete originalTool.dataset.checkoutTime;
+                delete originalTool.dataset.crew;
+                
+                // Update stack count
+                const stack = originalTool.closest('.tool-stack');
+                if (stack) {
+                    updateStackCount(stack);
+                }
+            }
+            
+            wrapper.remove();
+            updateLastModifiedTime();
+        }
+
+        // Return all tools
+        function returnAllTools() {
+            if (confirm('Return all checked out tools?')) {
+                document.querySelectorAll('.return-btn').forEach(btn => {
+                    returnTool(btn);
+                });
+            }
+        }
+
+        // Clear all checkouts
+        function clearAllCheckouts() {
+            if (confirm('Clear all tool checkouts and reset?')) {
+                initializeInventory();
+                createCrewCards();
+                updateLastModifiedTime();
+            }
+        }
+
+        // Toggle expand all stacks
+        function toggleExpandAll() {
+            const stacks = document.querySelectorAll('.tool-stack');
+            const shouldExpand = !document.querySelector('.tool-stack.expanded');
+            
+            stacks.forEach(stack => {
+                if (shouldExpand) {
+                    stack.classList.add('expanded');
+                } else {
+                    stack.classList.remove('expanded');
+                }
+            });
+        }
+
+        // Modal functions
+        function showAddModal() {
+            document.getElementById('addModal').style.display = 'block';
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+            document.getElementById('toolName').value = '';
+            document.getElementById('toolQuantity').value = '1';
+        }
+
+        function addNewTool() {
+            const name = document.getElementById('toolName').value.trim();
+            const category = document.getElementById('toolCategory').value;
+            const qty = parseInt(document.getElementById('toolQuantity').value);
+            
+            if (!name) {
+                alert('Please enter a tool name');
+                return;
+            }
+            
+            // Determine the class based on category
+            const classMap = {
+                'hammers': 'hammer',
+                'drivers': 'screwdriver',
+                'measuring': 'measuring',
+                'cutting': 'cutting',
+                'pliers': 'pliers',
+                'batteries': 'battery',
+                'power': 'power-tool',
+                'safety': 'safety',
+                'misc': 'misc'
+            };
+            
+            const newTool = {
+                name: name,
+                qty: qty,
+                class: classMap[category] || 'misc'
+            };
+            
+            // Add to inventory
+            if (!toolInventory[category]) {
+                toolInventory[category] = [];
+            }
+            toolInventory[category].push(newTool);
+            
+            // Create the tool stack
+            createToolStack(newTool, category + 'Pool');
+            setupDragEvents();
+            
+            closeAddModal();
+            updateLastModifiedTime();
+            saveSchedule();
+        }
+
+        // Save and load functions
+        function saveSchedule() {
+            const schedule = {
+                date: new Date().toISOString(),
+                lastUpdate: new Date().toLocaleString(),
+                inventory: toolInventory,
+                checkouts: [],
+                broken: []
+            };
+            
+            // Save checkouts
+            document.querySelectorAll('.drop-zone[data-crew]').forEach(zone => {
+                const crew = zone.dataset.crew;
+                const tools = Array.from(zone.children).map(wrapper => ({
+                    tool: wrapper.dataset.originalTool,
+                    number: wrapper.dataset.toolNumber,
+                    crew: crew,
+                    time: wrapper.querySelector('.checkout-time')?.textContent
+                }));
+                if (tools.length > 0) {
+                    schedule.checkouts.push({ crew, tools });
+                }
+            });
+            
+            // Save broken items
+            const brokenPool = document.getElementById('brokenPool');
+            schedule.broken = Array.from(brokenPool.querySelectorAll('.draggable')).map(el => ({
+                name: el.dataset.toolName,
+                number: el.dataset.toolNumber
+            }));
+            
+            localStorage.setItem('toolCheckoutSchedule', JSON.stringify(schedule));
+            localStorage.setItem('toolCheckoutDate', new Date().toDateString());
+            
+            // Visual feedback
+            const saveBtn = document.querySelector('.btn-save');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '✓ Saved!';
+            saveBtn.style.background = '#4cd137';
+            setTimeout(() => {
+                saveBtn.textContent = originalText;
+                saveBtn.style.background = '#4CAF50';
+            }, 2000);
+        }
+
+        function loadSchedule() {
+            const saved = localStorage.getItem('toolCheckoutSchedule');
+            const savedDate = localStorage.getItem('toolCheckoutDate');
+            
+            loadLastUpdateTime();
+            
+            if (saved && savedDate === new Date().toDateString()) {
+                if (confirm('Load today\'s saved tool checkouts?')) {
+                    const schedule = JSON.parse(saved);
+                    
+                    if (schedule.inventory) {
+                        toolInventory = schedule.inventory;
+                    }
+                    
+                    // Reinitialize with saved data
+                    initializeInventory();
+                    createCrewCards();
+                    
+                    // Load checkouts
+                    if (schedule.checkouts) {
+                        // Implementation would restore checked out tools
+                    }
+                }
+            }
+        }
+
+        function printSchedule() {
+            window.print();
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initializeInventory();
+            createCrewCards();
+            loadSchedule();
+        });
+
+        // Auto-save every 30 seconds
+        setInterval(saveSchedule, 30000);
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('addModal');
+            if (event.target == modal) {
+                closeAddModal();
+            }
+        }
+    </script>
+</body>
+</html>
