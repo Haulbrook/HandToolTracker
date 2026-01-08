@@ -64,8 +64,10 @@ function getInventory() {
 
     // Category mapping for CSS classes
     const categoryClassMap = {
+      'hammer': 'hammer',
       'hammers': 'hammer',
       'hammers & impact': 'hammer',
+      'screwdriver': 'screwdriver',
       'drivers': 'screwdriver',
       'drivers & bits': 'screwdriver',
       'measuring': 'measuring',
@@ -74,8 +76,11 @@ function getInventory() {
       'cutting tools': 'cutting',
       'pliers': 'pliers',
       'pliers & wrenches': 'pliers',
+      'fastening': 'screwdriver',
+      'battery': 'battery',
       'batteries': 'battery',
       'batteries & chargers': 'battery',
+      'power-tool': 'power-tool',
       'power': 'power-tool',
       'power tools': 'power-tool',
       'safety': 'safety',
@@ -86,8 +91,10 @@ function getInventory() {
 
     // Category mapping for pool IDs
     const categoryPoolMap = {
+      'hammer': 'hammers',
       'hammers': 'hammers',
       'hammers & impact': 'hammers',
+      'screwdriver': 'drivers',
       'drivers': 'drivers',
       'drivers & bits': 'drivers',
       'measuring': 'measuring',
@@ -96,8 +103,11 @@ function getInventory() {
       'cutting tools': 'cutting',
       'pliers': 'pliers',
       'pliers & wrenches': 'pliers',
+      'fastening': 'drivers',
+      'battery': 'batteries',
       'batteries': 'batteries',
       'batteries & chargers': 'batteries',
+      'power-tool': 'power',
       'power': 'power',
       'power tools': 'power',
       'safety': 'safety',
