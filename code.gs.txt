@@ -8,7 +8,7 @@
 // CONFIGURATION
 // ============================================
 const SPREADSHEET_ID = '1AmyIFL74or_Nh0QLMu_n18YosrSP9E4EA6k5MTzlq1Y';
-const INVENTORY_SHEET_NAME = 'Inventory';  // Tab name for inventory
+const INVENTORY_SHEET_NAME = 'Hand Tool Inventory';  // Tab name for inventory
 const HISTORY_SHEET_NAME = 'Checkouts';     // Tab name for checkout history
 
 // ============================================
