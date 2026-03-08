@@ -1,1090 +1,2364 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Daily Tool Checkout System</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Deep Roots — Crew Checkout</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-            padding: 10px;
-            overflow-x: auto;
-        }
+  :root {
+    --bg:       #111410;
+    --surface:  #1a1d17;
+    --surface2: #222620;
+    --border:   #2e3329;
+    --accent:   #7eb83a;
+    --accent2:  #5a8a28;
+    --text:     #e8ead4;
+    --muted:    #7a7d6a;
+    --danger:   #c44;
+    --success:  #3a8a5a;
+    --return:     #d97c1a;
+    --return2:    #a85e10;
+    --inventory:  #2a86b8;
+    --inventory2: #1a6490;
+  }
 
-        .container {
-            min-width: 1200px;
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #e9ecef;
-        }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-        h1 {
-            color: #2d3436;
-            font-size: 1.8em;
-        }
+  /* ── SCREENS ── */
+  .screen { display: none; min-height: 100vh; flex-direction: column; }
+  .screen.active { display: flex; }
 
-        .header-info {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-        }
+  /* ── HEADER ── */
+  .app-header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--accent);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .logo { display: flex; flex-direction: column; line-height: 1; }
+  .logo-top {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: 3px;
+  }
+  .logo-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .crew-badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 2px;
+    color: var(--surface);
+    background: var(--accent);
+    padding: 4px 12px;
+    border-radius: 20px;
+    display: none;
+  }
+  .crew-badge.visible { display: block; }
+  .cart-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 5px;
+    white-space: nowrap;
+    display: none;
+  }
+  .cart-badge.visible { display: block; }
 
-        .date-header {
-            color: #636e72;
-            font-size: 1em;
-        }
+  /* ── SCREEN 1: CREW SELECT ── */
+  #screen-crew {
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px 16px 40px;
+  }
+  .welcome-block {
+    text-align: center;
+    margin: 24px 0 32px;
+    width: 100%;
+  }
+  .welcome-block h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    letter-spacing: 4px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .welcome-block p {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+  .crew-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .crew-btn {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: border-color .2s, transform .15s, background .2s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .crew-btn:hover, .crew-btn:active {
+    border-color: var(--accent);
+    background: var(--surface2);
+    transform: scale(1.03);
+  }
+  .crew-btn:active { transform: scale(0.98); }
+  .crew-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .crew-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
 
-        .update-time {
-            background: #fff3cd;
-            color: #856404;
-            padding: 5px 15px;
-            border-radius: 5px;
-            font-size: 0.9em;
-            font-weight: 600;
-            border: 1px solid #ffc107;
-        }
+  /* ── SCREEN 2: CATALOG ── */
+  #screen-catalog { flex-direction: column; }
+  .catalog-toolbar {
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .search-wrap { position: relative; flex: 1; min-width: 160px; }
+  .search-wrap input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 7px 10px 7px 30px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-icon {
+    position: absolute; left: 9px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted); font-size: 14px; pointer-events: none;
+  }
+  .btn-change-crew {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: .2s;
+    white-space: nowrap;
+  }
+  .btn-change-crew:hover { color: var(--text); border-color: var(--muted); }
+  .btn-checkout-toolbar {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    background: var(--success);
+    color: #e8ead4;
+    cursor: pointer;
+    transition: opacity .2s, transform .1s;
+    white-space: nowrap;
+    letter-spacing: .3px;
+  }
+  .btn-checkout-toolbar:hover { opacity: .88; }
+  .btn-checkout-toolbar:active { transform: scale(.97); }
+  .btn-checkout-toolbar:disabled {
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: not-allowed;
+    opacity: 1;
+  }
 
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-        }
+  /* ── MODE SELECT SCREEN ── */
+  #screen-mode {
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 0 40px;
+  }
+  .mode-body {
+    width: 100%;
+    max-width: 520px;
+    padding: 28px 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+  .mode-question {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: var(--text);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .mode-btn {
+    width: 100%;
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    cursor: pointer;
+    transition: border-color .2s, transform .15s, background .2s;
+    background: var(--surface);
+    text-align: left;
+  }
+  .mode-btn:hover { transform: scale(1.02); }
+  .mode-btn:active { transform: scale(0.98); }
+  .mode-checkout:hover       { border-color: var(--accent);    background: rgba(126,184,58,.07); }
+  .mode-return-btn:hover     { border-color: var(--return);    background: rgba(217,124,26,.07); }
+  .mode-inventory-btn:hover  { border-color: var(--inventory); background: rgba(42,134,184,.07); }
+  .mode-icon {
+    font-size: 42px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .mode-text {}
+  .mode-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 3px;
+    line-height: 1;
+  }
+  .mode-checkout .mode-label      { color: var(--accent); }
+  .mode-return-btn .mode-label    { color: var(--return); }
+  .mode-inventory-btn .mode-label { color: var(--inventory); }
+  .mode-desc {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.3;
+  }
+  .btn-back-mode {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    margin-top: 4px;
+    transition: .2s;
+  }
+  .btn-back-mode:hover { color: var(--text); border-color: var(--muted); }
 
-        button {
-            padding: 10px 18px;
-            font-size: 0.95em;
-            font-weight: 600;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            -webkit-appearance: none;
-            touch-action: manipulation;
-            min-height: 44px;
-        }
+  /* ── MODE BADGE in catalog header ── */
+  .mode-indicator {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    padding: 4px 11px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .mode-indicator.checkout  { background: var(--accent);    color: #111; }
+  .mode-indicator.return    { background: var(--return);    color: #fff; }
+  .mode-indicator.inventory { background: var(--inventory); color: #fff; }
 
-        .btn-save {
-            background: #4CAF50;
-            color: white;
-        }
+  /* ── INVENTORY SCREEN ── */
+  #screen-inventory { flex-direction: column; }
+  .inv-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0 40px;
+  }
+  .inv-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 14px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .inv-section-header {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 14px 16px 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .inv-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    border-left: 3px solid transparent;
+    transition: background .15s, border-color .15s;
+    cursor: pointer;
+  }
+  .inv-item:hover  { background: var(--surface2); }
+  .inv-item:active { background: rgba(217,124,26,.08); }
+  .inv-item.in-return { border-left-color: var(--return); padding-left: 13px; }
+  .inv-item.in-return .inv-qty-badge {
+    color: var(--return);
+    background: rgba(217,124,26,.13);
+  }
+  .inv-return-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-top: 2px solid var(--return);
+    flex-shrink: 0;
+  }
+  .inv-return-bar.visible { display: flex; }
+  .inv-return-bar-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    flex: 1;
+  }
+  .btn-submit-inv-returns {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: 7px;
+    border: none;
+    background: var(--return);
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity .15s;
+  }
+  .btn-submit-inv-returns:disabled { opacity: .55; }
+  .inv-item-name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .inv-item-abbr {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    color: var(--inventory);
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .inv-item-fullname {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .inv-item-fullname-only {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .inv-qty-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--inventory);
+    background: rgba(42,134,184,.12);
+    padding: 5px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .inv-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .inv-empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .inv-empty h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 2px; color: var(--text);
+  }
+  .inv-empty p { font-size: 13px; margin-top: 6px; }
+  .inv-error {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--danger);
+    font-size: 13px;
+  }
+  .btn-inv-back {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: .2s;
+    white-space: nowrap;
+  }
+  .btn-inv-back:hover { color: var(--text); border-color: var(--muted); }
+  .inv-toolbar {
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .inv-total-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: auto;
+  }
 
-        .btn-clear {
-            background: #f44336;
-            color: white;
-        }
+  /* ── RETURN-MODE toolbar checkout button ── */
+  .btn-checkout-toolbar.return-mode {
+    background: var(--return);
+  }
 
-        .btn-print {
-            background: #2196F3;
-            color: white;
-        }
+  /* ── TAB BAR ── */
+  .tab-bar {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+    flex-shrink: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color .2s, border-color .2s, background .2s;
+    letter-spacing: .3px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: rgba(126,184,58,.05);
+  }
 
-        .btn-add {
-            background: #9c88ff;
-            color: white;
-        }
+  /* ── ITEM CARD (no abbreviation) ── */
+  .full-name-only {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.35;
+    padding: 2px 0 4px;
+  }
 
-        .btn-return-all {
-            background: #ff9800;
-            color: white;
-        }
+  /* Tool grid */
+  .tool-grid {
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .tool-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color .2s, transform .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tool-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .tool-card:active { transform: scale(0.97); border-color: var(--accent2); }
+  .card-img-wrap { position: relative; }
+  .card-img {
+    width: 100%; height: 90px; object-fit: cover; display: block;
+    background: var(--surface2);
+  }
+  .card-img-placeholder {
+    width: 100%; height: 90px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; color: var(--border);
+  }
+  .card-img-btns {
+    position: absolute;
+    top: 4px; right: 4px;
+    display: flex; gap: 3px;
+    z-index: 2;
+  }
+  .card-img-btn {
+    background: rgba(0,0,0,.65);
+    border: none; color: #fff;
+    font-size: 11px;
+    border-radius: 4px;
+    padding: 3px 5px;
+    cursor: pointer; line-height: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card-img-btn:hover { background: rgba(0,0,0,.9); }
+  /* img-edit modal */
+  .img-upload-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .img-upload-label:hover { border-color: var(--accent); color: var(--text); }
+  #img-edit-file { display: none; }
+  #img-edit-status { font-size: 12px; color: var(--muted); min-height: 16px; }
+  .card-body { padding: 8px 9px 10px; }
+  .abbr-tag {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; color: var(--accent); letter-spacing: 2px; line-height: 1;
+  }
+  .full-name { font-size: 11px; color: var(--text); margin-top: 2px; line-height: 1.3; }
 
-        .btn-expand {
-            background: #00b894;
-            color: white;
-        }
+  .in-cart-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-left: 6px;
+    vertical-align: middle;
+  }
 
-        button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
+  /* ── MODALS ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.8);
+    z-index: 200;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%; max-width: 360px;
+    overflow: hidden;
+    animation: slideUp .22s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .modal-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 2px; color: var(--accent);
+  }
+  .modal-close {
+    background: none; border: none;
+    color: var(--muted); font-size: 22px; cursor: pointer;
+    line-height: 1; padding: 0 4px;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 18px; }
+  .modal-footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 10px; justify-content: flex-end;
+  }
 
-        .resources-bar {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: grid;
-            grid-template-columns: 2fr 1.5fr 1.5fr 1.5fr 1fr 1fr;
-            gap: 15px;
-        }
+  /* Quantity modal */
+  .tool-selected-name {
+    font-size: 15px; font-weight: 500; color: var(--text);
+    margin-bottom: 6px; line-height: 1.3;
+  }
+  .tool-selected-abbr {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px; color: var(--accent); letter-spacing: 2px;
+    margin-bottom: 18px;
+  }
+  .qty-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+  }
+  .qty-control {
+    display: flex; align-items: center; gap: 0;
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    width: fit-content;
+  }
+  .qty-btn {
+    background: var(--surface2); border: none;
+    color: var(--text); font-size: 22px; font-weight: 400;
+    width: 52px; height: 52px;
+    cursor: pointer; transition: background .15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .qty-btn:hover { background: var(--border); }
+  .qty-btn:active { background: var(--accent); color: #111; }
+  .qty-input {
+    background: var(--bg); border: none; border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 22px; text-align: center;
+    width: 70px; height: 52px; outline: none;
+  }
+  /* hide number input arrows */
+  .qty-input::-webkit-outer-spin-button,
+  .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .qty-input[type=number] { -moz-appearance: textfield; }
 
-        .resource-section {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
+  /* Buttons */
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 8px; border: none;
+    cursor: pointer;
+    transition: opacity .2s, transform .1s;
+    letter-spacing: .3px;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--accent); color: #111; }
+  .btn-primary:hover { opacity: .88; }
+  .btn-ghost {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+  .btn-success { background: var(--success); color: #e8ead4; }
+  .btn-success:hover { opacity: .88; }
 
-        .resource-section h3 {
-            color: #495057;
-            font-size: 0.9em;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
+  /* Continue / Checkout modal */
+  .decision-body {
+    padding: 22px 18px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .decision-item-recap {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .recap-name { font-size: 13px; color: var(--text); }
+  .recap-qty {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px; color: var(--accent);
+    background: rgba(126,184,58,.12);
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .cart-running {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    text-align: center; margin-top: 4px;
+  }
+  .decision-btns {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-top: 8px;
+  }
+  .btn-full { width: 100%; padding: 14px; font-size: 15px; border-radius: 10px; }
 
-        .resource-items {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            min-height: 70px;
-            padding: 8px;
-            background: white;
-            border-radius: 6px;
-            border: 2px dashed #dee2e6;
-            max-height: 120px;
-            overflow-y: auto;
-        }
+  /* Success / Checkout done modal */
+  .success-body { padding: 24px 18px; text-align: center; }
+  .success-icon { font-size: 52px; margin-bottom: 12px; }
+  .success-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px; letter-spacing: 3px; color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .success-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+  .checkout-summary {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
+    text-align: left; margin-bottom: 18px;
+  }
+  .summary-header {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-tool { font-size: 12px; color: var(--text); }
+  .summary-tool-abbr {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px; color: var(--accent); letter-spacing: 1px;
+    margin-right: 6px;
+  }
+  .summary-qty {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px; color: var(--accent);
+  }
 
-        #brokenPool {
-            background: #ffe0e0;
-            border-color: #ff9999;
-        }
+  /* ── LOADING SPINNER ── */
+  .spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-        .draggable {
-            padding: 8px 12px;
-            border-radius: 5px;
-            cursor: move;
-            font-size: 0.85em;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-            position: relative;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
-            min-height: 36px;
-            display: inline-flex;
-            align-items: center;
-        }
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    padding: 50px 20px; text-align: center; color: var(--muted);
+    display: none;
+  }
+  .empty-state.visible { display: block; }
+  .empty-icon { font-size: 42px; margin-bottom: 12px; }
+  .empty-state h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 2px; color: var(--text);
+  }
+  .empty-state p { font-size: 12px; margin-top: 5px; }
 
-        .draggable:hover {
-            transform: scale(1.05);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-        }
+  /* ── REVIEW CART MODAL ── */
+  .review-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .review-item-info { flex: 1; min-width: 0; }
+  .review-item-abbr {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px; color: var(--accent); letter-spacing: 2px; line-height: 1;
+  }
+  .review-item-fullname { font-size: 12px; color: var(--text); line-height: 1.3; }
+  .review-item-fullname-only { font-size: 13px; font-weight: 500; color: var(--text); }
+  .review-item-avail {
+    font-size: 10px; color: var(--return); margin-top: 2px;
+    font-family: 'DM Mono', monospace; letter-spacing: 1px;
+  }
+  .review-qty-row { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .review-qty-btn {
+    width: 30px; height: 30px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-size: 18px; border-radius: 6px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .review-qty-btn:hover { background: var(--border); }
+  .review-qty-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px; color: var(--text);
+    min-width: 26px; text-align: center;
+  }
+  .review-remove {
+    background: none; border: none;
+    color: var(--muted); font-size: 18px; cursor: pointer;
+    padding: 2px 4px; line-height: 1; transition: color .15s;
+  }
+  .review-remove:hover { color: var(--danger); }
+  .review-footer-total {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--muted);
+  }
 
-        .draggable.dragging {
-            opacity: 0.5;
-        }
+  /* ── QTY MODAL — available text + error state ── */
+  .qty-avail-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 1px;
+    color: var(--return); margin-top: 8px;
+    display: none;
+  }
+  .qty-error-box {
+    background: rgba(204,68,68,.1);
+    border: 1px solid rgba(204,68,68,.3);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--danger);
+    font-size: 13px;
+    line-height: 1.4;
+    display: none;
+  }
 
-        .draggable.broken {
-            opacity: 0.6;
-            background: repeating-linear-gradient(
-                45deg,
-                #ff6b6b,
-                #ff6b6b 5px,
-                #ff9999 5px,
-                #ff9999 10px
-            ) !important;
-            color: white !important;
-        }
+  /* ── CART BADGE clickable ── */
+  #header-cart-badge {
+    cursor: pointer;
+    transition: border-color .2s, color .2s;
+  }
+  #header-cart-badge:hover { color: var(--text); border-color: var(--muted); }
 
-        /* Tool stack styling */
-        .tool-stack {
-            position: relative;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-        }
+  /* ── CONFIG NOTICE ── */
+  .config-notice {
+    background: rgba(126,184,58,.08);
+    border: 1px solid rgba(126,184,58,.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    margin: 10px 16px 0;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .config-notice a { color: var(--accent); }
+  .config-notice.hidden { display: none; }
 
-        .tool-stack.expanded {
-            display: inline-block;
-        }
-
-        .tool-stack .stack-count {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: #2d3436;
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75em;
-            font-weight: bold;
-            pointer-events: none;
-        }
-
-        .tool-stack .tool-item {
-            display: none;
-            margin-right: 4px;
-            margin-bottom: 4px;
-        }
-
-        .tool-stack.expanded .tool-item {
-            display: inline-block;
-        }
-
-        .tool-stack.expanded .stack-label {
-            display: none;
-        }
-
-        /* Tool type colors */
-        .hammer { background: #e17055; color: white; }
-        .screwdriver { background: #00b894; color: white; }
-        .battery { background: #fdcb6e; color: #333; }
-        .power-tool { background: #6c5ce7; color: white; }
-        .measuring { background: #0984e3; color: white; }
-        .cutting { background: #d63031; color: white; }
-        .pliers { background: #a29bfe; color: white; }
-        .fastening { background: #00cec9; color: white; }
-        .safety { background: #fd79a8; color: white; }
-        .misc { background: #636e72; color: white; }
-
-        .crews-container {
-            display: flex;
-            gap: 15px;
-            overflow-x: auto;
-            padding-bottom: 10px;
-        }
-
-        .crew-card {
-            flex: 0 0 190px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .crew-header {
-            padding: 10px;
-            color: white;
-            font-weight: bold;
-            text-align: center;
-            font-size: 1em;
-        }
-
-        .crew-1 .crew-header { background: #9c88ff; }
-        .crew-2 .crew-header { background: #00a8ff; }
-        .crew-3 .crew-header { background: #fbc531; }
-        .crew-4 .crew-header { background: #4cd137; }
-        .crew-5 .crew-header { background: #e84393; }
-        .crew-6 .crew-header { background: #00d2d3; }
-
-        .crew-body {
-            padding: 10px;
-        }
-
-        .crew-section {
-            margin-bottom: 10px;
-        }
-
-        .crew-section-title {
-            font-size: 0.75em;
-            color: #6c757d;
-            margin-bottom: 4px;
-            font-weight: 600;
-        }
-
-        .drop-zone {
-            min-height: 35px;
-            padding: 6px;
-            background: #f8f9fa;
-            border: 2px dashed #dee2e6;
-            border-radius: 5px;
-            font-size: 0.8em;
-        }
-
-        .drop-zone.drag-over {
-            background: #e3f2fd;
-            border-color: #2196F3;
-        }
-
-        .drop-zone .draggable {
-            margin-bottom: 4px;
-            display: block;
-        }
-
-        .checkout-time {
-            font-size: 0.65em;
-            color: #6c757d;
-            margin-left: 5px;
-        }
-
-        .return-btn {
-            float: right;
-            padding: 2px 6px;
-            background: #28a745;
-            color: white;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.7em;
-        }
-
-        .return-btn:hover {
-            background: #218838;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-
-        .modal-content {
-            background-color: white;
-            margin: 10% auto;
-            padding: 20px;
-            border-radius: 10px;
-            width: 400px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-        }
-
-        .modal-header {
-            font-size: 1.3em;
-            margin-bottom: 20px;
-            color: #2d3436;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #495057;
-            font-weight: 500;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            font-size: 0.95em;
-        }
-
-        .form-group input[type="number"] {
-            width: 80px;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 20px;
-        }
-
-        .modal-buttons button {
-            padding: 8px 20px;
-        }
-
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .close:hover {
-            color: #000;
-        }
-
-        /* Scrollbar styling */
-        .resource-items::-webkit-scrollbar,
-        .crews-container::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .resource-items::-webkit-scrollbar-track,
-        .crews-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-
-        .resource-items::-webkit-scrollbar-thumb,
-        .crews-container::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 3px;
-        }
-
-        .resource-items::-webkit-scrollbar-thumb:hover,
-        .crews-container::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-
-        @media print {
-            body {
-                background: white;
-            }
-            .resources-bar, .action-buttons {
-                display: none;
-            }
-            .crews-container {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 20px;
-            }
-            .crew-card {
-                flex: unset;
-                page-break-inside: avoid;
-            }
-        }
-    </style>
+  /* ── RESPONSIVE ── */
+  @media (max-width: 400px) {
+    .crew-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .crew-num { font-size: 40px; }
+    .tool-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🔧 Daily Tool Checkout</h1>
-            <div class="header-info">
-                <div class="date-header" id="currentDate"></div>
-                <div class="update-time" id="updateTime">Last Updated: Never</div>
-            </div>
-            <div class="action-buttons">
-                <button class="btn-expand" onclick="toggleExpandAll()">↔️ Expand All</button>
-                <button class="btn-add" onclick="showAddModal()">➕ Add Tool</button>
-                <button class="btn-return-all" onclick="returnAllTools()">↩️ Return All</button>
-                <button class="btn-save" onclick="saveSchedule()">💾 Save</button>
-                <button class="btn-clear" onclick="clearAllCheckouts()">🔄 Clear</button>
-                <button class="btn-print" onclick="printSchedule()">🖨️ Print</button>
-            </div>
-        </div>
 
-        <div class="resources-bar">
-            <div class="resource-section">
-                <h3>🔨 Hammers & Impact</h3>
-                <div class="resource-items" id="hammersPool"></div>
-            </div>
+<!-- ══════════════════════════════════════════════
+     CONFIG — paste your Google Apps Script URL here
+     after following setup-instructions.txt
+     ══════════════════════════════════════════════ -->
+<script>
+  const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxxi2QeTSQJ1g-WHX72zH_yMaMe-_FMGDx1WV3FsKkTVvw1zSC8-iybst4_UDPABo3j/exec';
+</script>
 
-            <div class="resource-section">
-                <h3>🔧 Drivers & Bits</h3>
-                <div class="resource-items" id="driversPool"></div>
-            </div>
-
-            <div class="resource-section">
-                <h3>📐 Measuring & Layout</h3>
-                <div class="resource-items" id="measuringPool"></div>
-            </div>
-
-            <div class="resource-section">
-                <h3>✂️ Cutting Tools</h3>
-                <div class="resource-items" id="cuttingPool"></div>
-            </div>
-
-            <div class="resource-section">
-                <h3>🔗 Pliers & Wrenches</h3>
-                <div class="resource-items" id="pliersPool"></div>
-            </div>
-
-            <div class="resource-section">
-                <h3>⚠️ Broken/Missing</h3>
-                <div class="resource-items drop-zone" id="brokenPool"></div>
-            </div>
-        </div>
-
-        <div class="resources-bar">
-            <div class="resource-section">
-                <h3>🔋 Batteries & Chargers</h3>
-                <div class="resource-items" id="batteriesPool"></div>
-            </div>
-
-            <div class="resource-section">
-                <h3>⚡ Power Tools</h3>
-                <div class="resource-items" id="powerPool"></div>
-            </div>
-
-            <div class="resource-section">
-                <h3>🦺 Safety Equipment</h3>
-                <div class="resource-items" id="safetyPool"></div>
-            </div>
-
-            <div class="resource-section" style="grid-column: span 3;">
-                <h3>📦 Miscellaneous</h3>
-                <div class="resource-items" id="miscPool"></div>
-            </div>
-        </div>
-
-        <h2 style="margin: 20px 0 15px; color: #2d3436;">Tool Checkouts by Crew</h2>
-        <div class="crews-container" id="crewsContainer">
-            <!-- Crews will be generated by JavaScript -->
-        </div>
+<!-- ██████████ SCREEN 1: CREW SELECT ██████████ -->
+<div id="screen-crew" class="screen active">
+  <header class="app-header">
+    <div class="logo">
+      <span class="logo-top">Deep Roots</span>
+      <span class="logo-sub">Crew Checkout</span>
     </div>
+  </header>
 
-    <!-- Add Tool Modal -->
-    <div id="addModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeAddModal()">&times;</span>
-            <h2 class="modal-header">Add New Tool</h2>
-            <div class="form-group">
-                <label for="toolName">Tool Name:</label>
-                <input type="text" id="toolName" placeholder="Enter tool name...">
-            </div>
-            <div class="form-group">
-                <label for="toolCategory">Category:</label>
-                <select id="toolCategory">
-                    <option value="hammers">Hammers & Impact</option>
-                    <option value="drivers">Drivers & Bits</option>
-                    <option value="measuring">Measuring & Layout</option>
-                    <option value="cutting">Cutting Tools</option>
-                    <option value="pliers">Pliers & Wrenches</option>
-                    <option value="batteries">Batteries & Chargers</option>
-                    <option value="power">Power Tools</option>
-                    <option value="safety">Safety Equipment</option>
-                    <option value="misc">Miscellaneous</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="toolQuantity">Quantity:</label>
-                <input type="number" id="toolQuantity" min="1" value="1">
-            </div>
-            <div class="modal-buttons">
-                <button onclick="closeAddModal()" style="background: #6c757d; color: white;">Cancel</button>
-                <button onclick="addNewTool()" style="background: #4CAF50; color: white;">Add Tool</button>
-            </div>
-        </div>
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center; padding: 20px 16px 40px;">
+    <div class="welcome-block">
+      <h1>Welcome!</h1>
+      <p>Choose your crew to begin</p>
     </div>
+    <div class="crew-grid">
+      <button class="crew-btn" onclick="selectCrew(1)">
+        <span class="crew-num">1</span>
+        <span class="crew-label">Crew</span>
+      </button>
+      <button class="crew-btn" onclick="selectCrew(2)">
+        <span class="crew-num">2</span>
+        <span class="crew-label">Crew</span>
+      </button>
+      <button class="crew-btn" onclick="selectCrew(3)">
+        <span class="crew-num">3</span>
+        <span class="crew-label">Crew</span>
+      </button>
+      <button class="crew-btn" onclick="selectCrew(4)">
+        <span class="crew-num">4</span>
+        <span class="crew-label">Crew</span>
+      </button>
+      <button class="crew-btn" onclick="selectCrew(5)">
+        <span class="crew-num">5</span>
+        <span class="crew-label">Crew</span>
+      </button>
+      <button class="crew-btn" onclick="selectCrew(6)">
+        <span class="crew-num">6</span>
+        <span class="crew-label">Crew</span>
+      </button>
+      <button class="crew-btn" onclick="selectCrew(7)">
+        <span class="crew-num">7</span>
+        <span class="crew-label">Crew</span>
+      </button>
+      <button class="crew-btn" onclick="selectCrew(8)">
+        <span class="crew-num">8</span>
+        <span class="crew-label">Crew</span>
+      </button>
+    </div>
+  </div>
+</div>
 
-    <script>
-        // Tool inventory with quantities
-        const toolInventory = {
-            hammers: [
-                { name: 'Claw Hammer', qty: 8, class: 'hammer' },
-                { name: 'Mini Sledge', qty: 4, class: 'hammer' },
-                { name: 'Dead Blow', qty: 3, class: 'hammer' },
-                { name: 'Framing Hammer', qty: 6, class: 'hammer' }
-            ],
-            drivers: [
-                { name: 'Phillips Screwdriver', qty: 10, class: 'screwdriver' },
-                { name: 'Flathead Screwdriver', qty: 10, class: 'screwdriver' },
-                { name: 'Impact Bit Set', qty: 6, class: 'screwdriver' },
-                { name: 'Multi-bit Driver', qty: 6, class: 'screwdriver' }
-            ],
-            measuring: [
-                { name: 'Level 2ft', qty: 6, class: 'measuring' },
-                { name: 'Level 4ft', qty: 4, class: 'measuring' },
-                { name: 'Framing Square', qty: 5, class: 'measuring' },
-                { name: 'Chalk Line', qty: 8, class: 'measuring' },
-                { name: 'String Line', qty: 10, class: 'measuring' },
-                { name: 'Tape Measure', qty: 15, class: 'measuring' }
-            ],
-            cutting: [
-                { name: 'Machete', qty: 4, class: 'cutting' },
-                { name: 'Utility Knife', qty: 12, class: 'cutting' },
-                { name: 'Hacksaw', qty: 4, class: 'cutting' },
-                { name: 'Tin Snips', qty: 6, class: 'cutting' }
-            ],
-            pliers: [
-                { name: 'Pliers', qty: 10, class: 'pliers' },
-                { name: 'Needle Nose Pliers', qty: 8, class: 'pliers' },
-                { name: 'Wire Strippers', qty: 6, class: 'pliers' },
-                { name: 'Wrench Set', qty: 5, class: 'fastening' },
-                { name: 'Adjustable Wrench', qty: 6, class: 'fastening' }
-            ],
-            batteries: [
-                { name: 'DeWalt 20V Battery', qty: 12, class: 'battery' },
-                { name: 'Milwaukee M18 Battery', qty: 8, class: 'battery' },
-                { name: 'Battery Charger', qty: 4, class: 'battery' }
-            ],
-            power: [
-                { name: 'Paint Gun', qty: 2, class: 'power-tool' },
-                { name: 'Impact Driver', qty: 6, class: 'power-tool' },
-                { name: 'Drill', qty: 8, class: 'power-tool' },
-                { name: 'Circular Saw', qty: 4, class: 'power-tool' }
-            ],
-            safety: [
-                { name: 'Safety Glasses', qty: 20, class: 'safety' },
-                { name: 'Work Gloves', qty: 30, class: 'safety' },
-                { name: 'Ear Protection', qty: 15, class: 'safety' }
-            ],
-            misc: [
-                { name: 'Tool Belt', qty: 10, class: 'misc' },
-                { name: 'Extension Cord', qty: 6, class: 'misc' },
-                { name: 'Work Light', qty: 5, class: 'misc' }
-            ]
-        };
+<!-- ██████████ SCREEN: MODE SELECT ██████████ -->
+<div id="screen-mode" class="screen">
+  <header class="app-header">
+    <div class="logo">
+      <span class="logo-top">Deep Roots</span>
+      <span class="logo-sub">Crew Checkout</span>
+    </div>
+    <span class="crew-badge visible" id="mode-crew-badge">CREW —</span>
+  </header>
 
-        let draggedElement = null;
-        let expandedStacks = new Set();
+  <div class="mode-body">
+    <div class="mode-question">What are you doing?</div>
 
-        // Initialize date
-        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric',
-            year: 'numeric'
-        });
+    <button class="mode-btn mode-checkout" onclick="selectMode('checkout')">
+      <div class="mode-icon">⬆️</div>
+      <div class="mode-text">
+        <div class="mode-label">Checkout</div>
+        <div class="mode-desc">Taking materials out to the job site</div>
+      </div>
+    </button>
 
-        // Update time functions
-        function updateLastModifiedTime() {
-            const now = new Date();
-            const timeString = now.toLocaleString('en-US', { 
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            document.getElementById('updateTime').textContent = `Last Updated: ${timeString}`;
-            localStorage.setItem('toolLastUpdateTime', timeString);
-        }
+    <button class="mode-btn mode-return-btn" onclick="selectMode('return')">
+      <div class="mode-icon">⬇️</div>
+      <div class="mode-text">
+        <div class="mode-label">Return</div>
+        <div class="mode-desc">Bringing unused materials back to the yard</div>
+      </div>
+    </button>
 
-        function loadLastUpdateTime() {
-            const savedTime = localStorage.getItem('toolLastUpdateTime');
-            if (savedTime) {
-                document.getElementById('updateTime').textContent = `Last Updated: ${savedTime}`;
+    <button class="mode-btn mode-inventory-btn" onclick="selectMode('inventory')">
+      <div class="mode-icon">📋</div>
+      <div class="mode-text">
+        <div class="mode-label">What Do I Have</div>
+        <div class="mode-desc">See what your crew currently has out on the job</div>
+      </div>
+    </button>
+
+    <button class="btn-back-mode" onclick="showScreen('screen-crew')">← Back to Crew Select</button>
+  </div>
+</div>
+
+<!-- ██████████ SCREEN: INVENTORY ██████████ -->
+<div id="screen-inventory" class="screen">
+  <header class="app-header">
+    <div class="logo">
+      <span class="logo-top">Deep Roots</span>
+      <span class="logo-sub">Crew Checkout</span>
+    </div>
+    <span class="crew-badge visible" id="inv-crew-badge">CREW —</span>
+    <span class="mode-indicator inventory">ON HAND</span>
+  </header>
+
+  <div class="inv-toolbar">
+    <button class="btn-inv-back" onclick="invReturnCart=[];updateInvReturnBar();showScreen('screen-mode')">← Back</button>
+    <span class="inv-total-badge" id="inv-total-badge"></span>
+  </div>
+
+  <div class="inv-body" id="inv-body">
+    <div class="inv-loading" id="inv-loading">
+      <span class="spinner" style="width:32px;height:32px;border-width:3px;"></span>
+      Loading…
+    </div>
+  </div>
+
+  <div class="inv-return-bar" id="inv-return-bar">
+    <span class="inv-return-bar-count" id="inv-return-bar-count"></span>
+    <button class="btn-submit-inv-returns" id="btn-submit-inv-returns" onclick="submitInvReturns()">
+      ↩ Submit Returns
+    </button>
+  </div>
+</div>
+
+<!-- ██████████ SCREEN 2: CATALOG ██████████ -->
+<div id="screen-catalog" class="screen">
+  <header class="app-header">
+    <div class="logo">
+      <span class="logo-top">Deep Roots</span>
+      <span class="logo-sub">Crew Checkout</span>
+    </div>
+    <span class="crew-badge visible" id="header-crew-badge">CREW —</span>
+    <span class="mode-indicator checkout" id="mode-indicator">CHECKOUT</span>
+    <span class="cart-badge visible" id="header-cart-badge" onclick="openReviewCart()" title="Review cart">Cart: 0</span>
+  </header>
+
+  <div id="sheets-notice" class="config-notice hidden">
+    ⚠️ Google Sheets not configured — checkouts will save locally only.
+    See <strong>setup-instructions.txt</strong> to connect.
+  </div>
+
+  <div class="catalog-toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="catalog-search" placeholder="Search tool…" oninput="renderCatalog()">
+    </div>
+    <button class="btn-change-crew" onclick="changeCrew()">← Crew</button>
+    <button class="btn-checkout-toolbar" id="btn-checkout-toolbar" onclick="confirmBeforeCheckout()" disabled>
+      Checkout
+    </button>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-cage"      onclick="switchTab('cage')">Cage Hand Tools</button>
+    <button class="tab-btn"        id="tab-yard"      onclick="switchTab('yard')">Yard</button>
+    <button class="tab-btn"        id="tab-container" onclick="switchTab('container')">Container</button>
+  </div>
+
+  <div class="tool-grid" id="tool-grid"></div>
+  <div class="empty-state" id="catalog-empty">
+    <div class="empty-icon">🔍</div>
+    <h3>No Tools Found</h3>
+    <p>Try a different search term</p>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: QUANTITY ══════════════ -->
+<div class="modal-overlay" id="qty-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Add to Cart</span>
+      <button class="modal-close" onclick="closeQtyModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tool-selected-abbr" id="qty-abbr">TM</div>
+      <div class="tool-selected-name" id="qty-name">Tape Measure</div>
+      <div class="qty-error-box" id="qty-error-box"></div>
+      <div id="qty-controls">
+        <div class="qty-label">Quantity</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="adjustQty(-1)">−</button>
+          <input class="qty-input" type="number" id="qty-input" value="1" min="1" max="99">
+          <button class="qty-btn" onclick="adjustQty(1)">+</button>
+        </div>
+        <div class="qty-avail-text" id="qty-avail-text"></div>
+      </div>
+    </div>
+    <div class="modal-footer" id="qty-footer">
+      <button class="btn btn-ghost" onclick="closeQtyModal()">Cancel</button>
+      <button class="btn btn-primary" id="qty-add-btn" onclick="addToCart()">Add to Cart</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: CONTINUE / CHECKOUT ══════════════ -->
+<div class="modal-overlay" id="decision-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Added!</span>
+    </div>
+    <div class="decision-body">
+      <div class="decision-item-recap">
+        <span class="recap-name" id="recap-name">—</span>
+        <span class="recap-qty" id="recap-qty">× 1</span>
+      </div>
+      <div class="cart-running" id="cart-running">1 item in cart</div>
+      <div class="decision-btns">
+        <button class="btn btn-ghost btn-full" id="btn-continue" onclick="continueShopping()">
+          ← Continue Shopping
+        </button>
+        <button class="btn btn-full" id="btn-review-cart"
+          onclick="document.getElementById('decision-modal').classList.remove('open');openReviewCart();"
+          style="background:var(--surface2);border:1px solid var(--border);color:var(--text);">
+          📋 Review Cart
+        </button>
+        <button class="btn btn-success btn-full" id="btn-decision-submit" onclick="confirmBeforeCheckout()">
+          ✓ Checkout
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: CHECKOUT SUCCESS ══════════════ -->
+<div class="modal-overlay" id="success-modal">
+  <div class="modal">
+    <div class="success-body">
+      <div class="success-icon">✅</div>
+      <div class="success-title" id="success-title">Checked Out!</div>
+      <div class="success-subtitle" id="success-subtitle">Crew — | Items recorded</div>
+      <div class="checkout-summary" id="checkout-summary"></div>
+      <button class="btn btn-primary btn-full" onclick="doneCheckout()">
+        Back to Start
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: REVIEW CART ══════════════ -->
+<div class="modal-overlay" id="review-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <span class="modal-title" id="review-modal-title">CART REVIEW</span>
+      <button class="modal-close" onclick="closeReviewModal()">✕</button>
+    </div>
+    <div id="review-modal-body" style="max-height:55vh;overflow-y:auto;"></div>
+    <div class="modal-footer" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <span class="review-footer-total" id="review-footer-total"></span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="closeReviewModal()">Close</button>
+        <button class="btn" id="review-submit-btn"
+          onclick="closeReviewModal();initiateCheckout();"
+          style="background:var(--success);color:#e8ead4;">
+          ✓ Checkout
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: IMAGE EDIT ══════════════ -->
+<div class="modal-overlay" id="img-edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">SET IMAGE</span>
+      <button class="modal-close" onclick="closeImgEdit()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:1px;" id="img-edit-name"></div>
+      <div id="img-edit-preview"></div>
+      <label class="img-upload-label" for="img-edit-file">
+        📷 Choose a photo
+      </label>
+      <input type="file" id="img-edit-file" accept="image/*" onchange="previewImgEdit()">
+      <div id="img-edit-status"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="saveImgEdit(null)" style="color:var(--danger);margin-right:auto;">Remove</button>
+      <button class="btn btn-ghost" onclick="closeImgEdit()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveImgEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: SUBMITTING ══════════════ -->
+<div class="modal-overlay" id="submitting-modal">
+  <div class="modal">
+    <div class="success-body">
+      <div class="success-icon" style="font-size:36px"><span class="spinner"></span></div>
+      <div class="success-title">Submitting…</div>
+      <div class="success-subtitle">Sending to Google Sheets</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════════════════
+const TOOL_STORAGE_KEY = 'dr_tool_legend_v2';
+
+const SEED = [
+  { id:'s01', abbr:'AW',  name:'Adjustable Wrench',     img:null },
+  { id:'s02', abbr:'APG', name:'Air Paint Gun',          img:null },
+  { id:'s03', abbr:'BC',  name:'Battery Charger',        img:null },
+  { id:'s04', abbr:'CH',  name:'Claw Hammer',            img:null },
+  { id:'s05', abbr:'CHL', name:'Chalk Line',             img:null },
+  { id:'s06', abbr:'CS',  name:'Circular Saw',           img:null },
+  { id:'s07', abbr:'DB',  name:'Dead Blow',              img:null },
+  { id:'s08', abbr:'DR',  name:'Drill',                  img:null },
+  { id:'s09', abbr:'DWB', name:'DeWalt 20V Battery',     img:null },
+  { id:'s10', abbr:'EC',  name:'Extension Cord',         img:null },
+  { id:'s11', abbr:'EP',  name:'Ear Protection',         img:null },
+  { id:'s12', abbr:'FH',  name:'Framing Hammer',         img:null },
+  { id:'s13', abbr:'FSD', name:'Flathead Screwdriver',   img:null },
+  { id:'s14', abbr:'FSQ', name:'Framing Square',         img:null },
+  { id:'s15', abbr:'HS',  name:'Hacksaw',                img:null },
+  { id:'s16', abbr:'IBS', name:'Impact Bit Set',         img:null },
+  { id:'s17', abbr:'ID',  name:'Impact Driver',          img:null },
+  { id:'s18', abbr:'L2',  name:'Level 2ft',              img:null },
+  { id:'s19', abbr:'L4',  name:'Level 4ft',              img:null },
+  { id:'s20', abbr:'M18', name:'Milwaukee M18 Battery',  img:null },
+  { id:'s21', abbr:'MAC', name:'Machete',                img:null },
+  { id:'s22', abbr:'MBD', name:'Multi-bit Driver',       img:null },
+  { id:'s23', abbr:'MS',  name:'Mini Sledge',            img:null },
+  { id:'s24', abbr:'NNP', name:'Needle Nose Pliers',     img:null },
+  { id:'s25', abbr:'PG',  name:'Paint Gun',              img:null },
+  { id:'s26', abbr:'PL',  name:'Pliers',                 img:null },
+  { id:'s27', abbr:'PSD', name:'Phillips Screwdriver',   img:null },
+  { id:'s28', abbr:'SG',  name:'Safety Glasses',         img:null },
+  { id:'s29', abbr:'STL', name:'String Line',            img:null },
+  { id:'s30', abbr:'TB',  name:'Tool Belt',              img:null },
+  { id:'s31', abbr:'TM',  name:'Tape Measure',           img:null },
+  { id:'s32', abbr:'TS',  name:'Tin Snips',              img:null },
+  { id:'s33', abbr:'UK',  name:'Utility Knife',          img:null },
+  { id:'s34', abbr:'WG',  name:'Work Gloves',            img:null },
+  { id:'s35', abbr:'WL',  name:'Work Light',             img:null },
+  { id:'s36', abbr:'WRN', name:'Wrench Set',             img:null },
+  { id:'s37', abbr:'WS',  name:'Wire Strippers',         img:null },
+];
+
+// ── YARD ITEMS ─────────────────────────────────────────────
+const YARD_ITEMS = [
+  // Towing / securing
+  { id:'y01', name:'Blue Hose Hydroseeder',              img:null },
+  { id:'y02', name:'Blue Hose w/ Metal Fittings 2"',     img:null },
+  { id:'y03', name:'Chain Buckles (for securing machines)', img:null },
+  { id:'y04', name:'Heavy Chains',                       img:null },
+  { id:'y05', name:'Loose Straps (Hanging)',             img:null },
+  { id:'y06', name:'Pintle Hitch',                       img:null },
+  { id:'y07', name:'Ratchet Straps (in bin)',            img:null },
+  { id:'y08', name:'Red Canvas Hoses (Coiled)',          img:null },
+  { id:'y09', name:'Tan Canvas Hoses (Coiled)',          img:null },
+  { id:'y10', name:'Tow Hooks / Connectors',             img:null },
+  { id:'y11', name:'Trailer Hitches – 2 5/16" (Yellow)', img:null },
+  { id:'y12', name:'Trailer Hitches – 2" (Blue Label)',  img:null },
+  { id:'y13', name:'Tri-Ball Hitches',                   img:null },
+  // Mulch
+  { id:'y14', name:'Black Mulch',                        img:null },
+  { id:'y15', name:'Brown Mulch',                        img:null },
+  { id:'y16', name:'Cedar Mulch (No Float)',             img:null },
+  { id:'y17', name:'Hill Hugger Mulch',                  img:null },
+  { id:'y18', name:'Kid Safe Mulch',                     img:null },
+  { id:'y19', name:'Natural Mulch',                      img:null },
+  { id:'y20', name:'Pine Bark Mini Nuggets',             img:null },
+  { id:'y21', name:'Pine Bark Mini Nuggets (Bag)',       img:null },
+  { id:'y22', name:'Red Mulch (Bag)',                    img:null },
+  { id:'y23', name:'Rubber Mulch (Bag)',                 img:null },
+  // Stone / aggregate
+  { id:'y24', name:'57 Stone',                           img:null },
+  { id:'y25', name:'Chatahoochee Pea Gravel',            img:null },
+  { id:'y26', name:'Crusher Run',                        img:null },
+  { id:'y27', name:'Rip Rap',                            img:null },
+  { id:'y28', name:'Sand',                               img:null },
+  // Boulders / rock / block
+  { id:'y29', name:'2 Man Boulders',                     img:null },
+  { id:'y30', name:'3 Man Boulders',                     img:null },
+  { id:'y31', name:'8" x 8" x 16" Block',               img:null },
+  { id:'y32', name:'Colorado 4" - 7" River Rock',        img:null },
+  { id:'y33', name:'Cumberland Blend',                   img:null },
+  { id:'y34', name:'Deco Pebble',                        img:null },
+  { id:'y35', name:'Egg Rock',                           img:null },
+  { id:'y36', name:'Garden Boulders',                    img:null },
+  { id:'y37', name:'Garden Path (Chattahoochee Pea Gravel)', img:null },
+  { id:'y38', name:'Gray Rubble',                        img:null },
+  { id:'y39', name:'Large Slate Chips',                  img:null },
+  { id:'y40', name:'Mexican Beach Pebbles',              img:null },
+  { id:'y41', name:'Mountain Boulders',                  img:null },
+  { id:'y42', name:'Multi/Standard 2" - 5" River Rock',  img:null },
+  { id:'y43', name:'Multi/Standard 4" - 7" River Rock',  img:null },
+  { id:'y44', name:'Multi/Standard 6" - 12" River Rock', img:null },
+  { id:'y45', name:'Tan Rubble',                         img:null },
+  // Slate chips
+  { id:'y46', name:'1/4" - 1/2" Mini Slate Chips',      img:null },
+  { id:'y47', name:'3/4" - 2" Standard Slate Chips',    img:null },
+  // Flagstone / steps
+  { id:'y48', name:'36" x 18" Flagstone Steps',         img:null },
+  { id:'y49', name:'36" x 18" Quarry Cut Steps',        img:null },
+  { id:'y50', name:'48" x 18" Flagstone Steps',         img:null },
+  { id:'y51', name:'48" x 18" Quarry Cut Steps',        img:null },
+  { id:'y52', name:'Blue Flagstone',                     img:null },
+  { id:'y53', name:'Tan Flagstone Squares',              img:null },
+  { id:'y54', name:'Tan/Brown 1 3/4" - 2 1/2" Flagstone', img:null },
+  { id:'y55', name:'Tan/Brown 1" - 1 3/4" Flagstone',   img:null },
+  { id:'y56', name:'Tan/Brown 2" - 3" Flagstone Steppers', img:null },
+  // Mod block
+  { id:'y57', name:'Buff Mod Block',                     img:null },
+  { id:'y58', name:'Buff Mod Block Caps',                img:null },
+  { id:'y59', name:'Gray Mod Block',                     img:null },
+  { id:'y60', name:'Gray Mod Block Caps',                img:null },
+  { id:'y61', name:'Toccoa Blend Mod Block',             img:null },
+  { id:'y62', name:'Toccoa Blend Mod Block Caps',        img:null },
+];
+
+// ── CONTAINER ITEMS ────────────────────────────────────────
+const CONTAINER_ITEMS = [
+  // Irrigation fittings
+  { id:'c01', name:'#22 Drycon (100ct box)',             img:null },
+  { id:'c02', name:'1 1/2" Coupling',                    img:null },
+  { id:'c03', name:'1" Ball Valve',                      img:null },
+  { id:'c04', name:'1" Sharkbite',                       img:null },
+  { id:'c05', name:'1"x 1/2" Slips FIPT',               img:null },
+  { id:'c06', name:'1"x3/4" Reducing Thread Slip',       img:null },
+  { id:'c07', name:'2 1/2" Ball Valve',                  img:null },
+  { id:'c08', name:'2 1/2"x 1 1/2" Reducer Bushing Spigot Slip', img:null },
+  { id:'c09', name:'2 Wire',                             img:null },
+  { id:'c10', name:'2" 45',                              img:null },
+  { id:'c11', name:'2" 90',                              img:null },
+  { id:'c12', name:'2" Ball Valve',                      img:null },
+  { id:'c13', name:'2" Inside Outside Ball Valve',       img:null },
+  { id:'c14', name:'2" Slip Coupling',                   img:null },
+  { id:'c15', name:'2" Slip Thread Male Coupling',       img:null },
+  { id:'c16', name:'2" Tee',                             img:null },
+  { id:'c17', name:'2"x1 1/2" Slip Reducer',            img:null },
+  { id:'c18', name:'200- 3/4 Tee Slip',                  img:null },
+  { id:'c19', name:'3/4 Reducing Tee Slip Slip Thread (Combo Tee)', img:null },
+  { id:'c20', name:'3/4" 45',                            img:null },
+  { id:'c21', name:'3/4" 90',                            img:null },
+  { id:'c22', name:'3/4" Coupling',                      img:null },
+  { id:'c23', name:'Backflow Preventer',                 img:null },
+  { id:'c24', name:'Flex Swing Pipe 100ft.',             img:null },
+  { id:'c25', name:'Hunter PGV 151',                     img:null },
+  { id:'c26', name:'Pressure Reducing Valve',            img:null },
+  { id:'c27', name:'Rain Bird 200 PGA Valve',            img:null },
+  { id:'c28', name:'Self Pierce 1/4" Barb Connector (25ct bag grey)', img:null },
+  // Spray heads / rotors
+  { id:'c29', name:'12" 5004 Rotor +',                   img:null },
+  { id:'c30', name:'15 Van Spray Heads',                 img:null },
+  { id:'c31', name:'18" 1800',                           img:null },
+  { id:'c32', name:'18" 5004 Rotor',                     img:null },
+  { id:'c33', name:'1800 12" Sprayer',                   img:null },
+  { id:'c34', name:'1800 6" Sprayer',                    img:null },
+  { id:'c35', name:'1800 Spray to Drip Conversion',      img:null },
+  { id:'c36', name:'8" Sprayer',                         img:null },
+  // Drip / xeri
+  { id:'c37', name:'Misters',                            img:null },
+  { id:'c38', name:'Stake with Pipe 12"',                img:null },
+  { id:'c39', name:'Tape BT 5\'',                        img:null },
+  { id:'c40', name:'Tube Sticks No Stakes',              img:null },
+  { id:'c41', name:'Xeri Barb 1/4"',                     img:null },
+  { id:'c42', name:'Xeri Pipe Riser Sticks',             img:null },
+  { id:'c43', name:'Xeri-Bug Emitter PC .5 GPH (100ct bag blue)', img:null },
+  { id:'c44', name:'Xeri-Bug Emitter PC 20 GPH (100ct bag red)',  img:null },
+  { id:'c45', name:'XS 180 Xeri Spray H',                img:null },
+  // Controllers / modules / sensors
+  { id:'c46', name:'4 Station Module',                   img:null },
+  { id:'c47', name:'6 Station Module',                   img:null },
+  { id:'c48', name:'8 Station Module',                   img:null },
+  { id:'c49', name:'ESP 2W Cont 120V',                   img:null },
+  { id:'c50', name:'ESP Me3 Controller',                 img:null },
+  { id:'c51', name:'EZ1 Single Station Decoder',         img:null },
+  { id:'c52', name:'LNK2WiFi',                           img:null },
+  { id:'c53', name:'Mini Clik Sensor',                   img:null },
+  { id:'c54', name:'Moisture Sensor Rain/Freeze Combo',  img:null },
+  { id:'c55', name:'Node 1 Zone Cont',                   img:null },
+  { id:'c56', name:'Wired Rain Sensor',                  img:null },
+  { id:'c57', name:'Wireless Rain Clik Sensor',          img:null },
+  // Lighting
+  { id:'c58', name:'200 Lumens',                         img:null },
+  { id:'c59', name:'200 Lumens Mini Beam Brilliance',    img:null },
+  { id:'c60', name:'400 Lumens Mini Beam Brilliance',    img:null },
+  { id:'c61', name:'400 Lumens Mini Beam Without S&S',   img:null },
+  { id:'c62', name:'Alliance TF200 Transformer',         img:null },
+  { id:'c63', name:'BL115 Alliance',                     img:null },
+  { id:'c64', name:'Centennial Brass 15478',              img:null },
+  { id:'c65', name:'G4 Ecostar',                         img:null },
+  { id:'c66', name:'MR16',                               img:null },
+  { id:'c67', name:'Par-36 Brilliance LED',              img:null },
+  { id:'c68', name:'PT-BUL1-BS-NL',                      img:null },
+  { id:'c69', name:'Sollos Deck Post Light 997104',      img:null },
+  { id:'c70', name:'Sollos Ledge Lights',                img:null },
+  { id:'c71', name:'Solos PTH075-AB-18',                 img:null },
+  { id:'c72', name:'Unique Bigbang BIGB NL',             img:null },
+  { id:'c73', name:'Unique Nova NL',                     img:null },
+  { id:'c74', name:'Unique Odyssey Series Star NL',      img:null },
+  { id:'c75', name:'VSM 2407 4 BBZ Light Stems',         img:null },
+  // Edging
+  { id:'c76', name:'Black Aluminium Corners',            img:null },
+  { id:'c77', name:'Black Aluminium Edging',             img:null },
+  { id:'c78', name:'Black Aluminium Tapered Ends',       img:null },
+  { id:'c79', name:'Bronze Aluminium Corners',           img:null },
+  { id:'c80', name:'Bronze Aluminium Edging',            img:null },
+  { id:'c81', name:'Bronze Aluminium Tapered Ends',      img:null },
+  // Misc supplies
+  { id:'c82', name:'Box Glue',                           img:null },
+  { id:'c83', name:'Box Primer',                         img:null },
+  { id:'c84', name:'Duct Tape',                          img:null },
+  { id:'c85', name:'Flashing',                           img:null },
+  { id:'c86', name:'N 12 Dual Wall Corrugated',          img:null },
+  { id:'c87', name:'Post Base Brace 6" x 6"',           img:null },
+  { id:'c88', name:'6" x 6" - 8\'',                     img:null },
+  { id:'c89', name:'Sod Staples',                        img:null },
+  { id:'c90', name:'Waterproof Duct Tape',               img:null },
+  // Drainage — PVC pipe
+  { id:'c91', name:'1 1/2" Class 200 PVC',              img:null },
+  { id:'c92', name:'1 1/2" Schedule 40 PVC',            img:null },
+  { id:'c93', name:'1" Class 200 PVC',                   img:null },
+  { id:'c94', name:'1" Schedule 40 PVC',                 img:null },
+  { id:'c95', name:'2" Class 200 PVC',                   img:null },
+  { id:'c96', name:'2" Schedule 40 PVC',                 img:null },
+  { id:'c97', name:'3/4" Class 200 PVC',                 img:null },
+  { id:'c98', name:'3/4" Schedule 40 PVC',               img:null },
+  { id:'c99', name:'4" S&D PVC',                         img:null },
+  { id:'c100',name:'4" Schedule 40 PVC',                 img:null },
+  { id:'c101',name:'6" S&D PVC',                         img:null },
+  { id:'c102',name:'6" Schedule 40 PVC',                 img:null },
+  // Drainage — corrugated / fittings
+  { id:'c103',name:'4" 45 Connector',                    img:null },
+  { id:'c104',name:'4" 90 Connector',                    img:null },
+  { id:'c105',name:'4" Corrugated Connector',            img:null },
+  { id:'c106',name:'4" Dual Wall Corrugated',            img:null },
+  { id:'c107',name:'4" Perforated w/ Sock Grade A',      img:null },
+  { id:'c108',name:'4" Perforated w/ Sock Grade B',      img:null },
+  { id:'c109',name:'4" Solid Corrugated Thin Wall',      img:null },
+  { id:'c110',name:'4" Tee Connector',                   img:null },
+  { id:'c111',name:'4" Wye Connector',                   img:null },
+  { id:'c112',name:'4"-6" Reducer Coupling',             img:null },
+  { id:'c113',name:'6" 45 Connector',                    img:null },
+  { id:'c114',name:'6" 90 Connector',                    img:null },
+  { id:'c115',name:'6" Dual Wall Corrugated',            img:null },
+  { id:'c116',name:'6" Perforated w/ Sock Grade A',      img:null },
+  { id:'c117',name:'6" Perforated w/ Sock Grade B',      img:null },
+  { id:'c118',name:'6" Tee Connector',                   img:null },
+  { id:'c119',name:'6" Wye Connector',                   img:null },
+  { id:'c120',name:'ADS Strip Drain',                    img:null },
+  { id:'c121',name:'NDS Strip Drain',                    img:null },
+  // Drain boxes / basins
+  { id:'c122',name:'12" Drain Box',                      img:null },
+  { id:'c123',name:'18" Drain Box',                      img:null },
+  { id:'c124',name:'24" Drain Basin',                    img:null },
+  { id:'c125',name:'24" Drain Box',                      img:null },
+  // Fabric / geotextile
+  { id:'c126',name:'Driveway Mat 15\' x 500\'',          img:null },
+  { id:'c127',name:'Driveway Mat 6\' x 150\'',           img:null },
+  { id:'c128',name:'Drip Tube (Tree Stake)',              img:null },
+  { id:'c129',name:'Geogrid 6\' x 150\'',                img:null },
+  { id:'c130',name:'Geogrid 10\' x 150\'',               img:null },
+  { id:'c131',name:'Geogrid 12\' x 150\'',               img:null },
+  { id:'c132',name:'NW4',                                img:null },
+  { id:'c133',name:'NW4 15\' x 300\'',                   img:null },
+  { id:'c134',name:'Silt Fence',                         img:null },
+  { id:'c135',name:'Spun Bound Fabric',                  img:null },
+  { id:'c136',name:'Wooden Stakes',                      img:null },
+];
+
+// ══════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════
+let currentCrew      = null;
+let currentMode      = 'checkout'; // 'checkout' | 'return'
+let currentTab       = 'cage';     // 'cage' | 'yard' | 'container'
+let cart             = [];         // [{ id, abbr, name, qty }]
+let selectedTool     = null;       // tool object being qty'd
+let tools            = [];
+let crewInventory    = {};         // { "item name": netQty } — loaded on Return mode
+let inventoryLoaded  = false;      // true once fetch completes for Return mode
+let invReturnCart    = [];         // [{ id, abbr, name, qty }] — returns queued from What Do I Have
+let invReturnMode    = false;      // true when qty modal opened from inventory screen
+
+function getTabItems() {
+  if (currentTab === 'cage')      return tools;
+  if (currentTab === 'yard')      return YARD_ITEMS;
+  if (currentTab === 'container') return CONTAINER_ITEMS;
+  return tools;
+}
+
+function findItemById(id) {
+  return tools.find(t => t.id === id)
+      || YARD_ITEMS.find(t => t.id === id)
+      || CONTAINER_ITEMS.find(t => t.id === id);
+}
+
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════
+function init() {
+  try {
+    const stored = localStorage.getItem(TOOL_STORAGE_KEY);
+    tools = stored ? JSON.parse(stored) : SEED;
+  } catch(e) { tools = SEED; }
+  if (!tools || tools.length === 0) tools = SEED;
+
+  // Show config notice if no Sheets URL set
+  if (!SHEETS_URL) {
+    document.getElementById('sheets-notice').classList.remove('hidden');
+  }
+
+  // Pre-load shared item images from Google Sheets
+  loadImages();
+}
+
+// ══════════════════════════════════════════════════════════
+//  SCREENS
+// ══════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════
+//  CREW SELECTION
+// ══════════════════════════════════════════════════════════
+function selectCrew(num) {
+  currentCrew = num;
+  document.getElementById('mode-crew-badge').textContent = `CREW ${num}`;
+  showScreen('screen-mode');
+}
+
+function selectMode(mode) {
+  currentMode = mode;
+
+  if (mode === 'return') {
+    currentMode     = 'return';
+    currentTab      = 'cage';
+    cart            = [];
+    crewInventory   = {};
+    inventoryLoaded = false;
+    document.getElementById('catalog-search').value = '';
+    document.getElementById('header-crew-badge').textContent = `CREW ${currentCrew}`;
+    const ind = document.getElementById('mode-indicator');
+    ind.textContent = 'RETURN';
+    ind.className   = 'mode-indicator return';
+    updateCartBadge();
+    updateTabUI();
+    renderCatalog();
+    showScreen('screen-catalog');
+    // Fetch inventory in background for validation — disable tool cards until ready
+    document.getElementById('tool-grid').style.opacity = '0.5';
+    document.getElementById('tool-grid').style.pointerEvents = 'none';
+    fetchCrewInventory().then(inv => {
+      crewInventory   = inv;
+      inventoryLoaded = true;
+    }).catch(() => {
+      inventoryLoaded = true; // allow without validation if fetch fails
+    }).finally(() => {
+      document.getElementById('tool-grid').style.opacity = '';
+      document.getElementById('tool-grid').style.pointerEvents = '';
+    });
+    return;
+  }
+
+  if (mode === 'inventory') {
+    document.getElementById('inv-crew-badge').textContent = `CREW ${currentCrew}`;
+    document.getElementById('inv-total-badge').textContent = '';
+    document.getElementById('inv-body').innerHTML = `
+      <div class="inv-loading" id="inv-loading">
+        <span class="spinner" style="width:32px;height:32px;border-width:3px;"></span>
+        Loading…
+      </div>`;
+    showScreen('screen-inventory');
+    loadInventory();
+    return;
+  }
+
+  currentTab = 'cage';
+  cart = [];
+  document.getElementById('catalog-search').value = '';
+  document.getElementById('header-crew-badge').textContent = `CREW ${currentCrew}`;
+
+  const ind = document.getElementById('mode-indicator');
+  ind.textContent = mode === 'return' ? 'RETURN' : 'CHECKOUT';
+  ind.className = `mode-indicator ${mode === 'return' ? 'return' : 'checkout'}`;
+
+  updateCartBadge();
+  updateTabUI();
+  renderCatalog();
+  showScreen('screen-catalog');
+}
+
+// ── Inventory-screen return helpers ─────────────────────────────
+
+function openInvReturnQtyFromEl(el) {
+  const item = {
+    abbr: el.dataset.itemAbbr,
+    name: el.dataset.itemName,
+    qty:  parseInt(el.dataset.itemQty) || 0
+  };
+  openInvReturnQty(item);
+}
+
+function openInvReturnQty(item) {
+  invReturnMode = true;
+  const itemId  = item.abbr || item.name;
+  selectedTool  = { id: itemId, abbr: item.abbr || '', name: item.name, _invMaxQty: item.qty };
+
+  const errorBox  = document.getElementById('qty-error-box');
+  const controls  = document.getElementById('qty-controls');
+  const availText = document.getElementById('qty-avail-text');
+  const addBtn    = document.getElementById('qty-add-btn');
+  const qtyInput  = document.getElementById('qty-input');
+
+  document.getElementById('qty-abbr').textContent = item.abbr || '';
+  document.getElementById('qty-name').textContent  = item.name;
+  document.querySelector('#qty-modal .modal-title').textContent = 'Return Item';
+  addBtn.textContent = '↩ Return Item';
+  document.querySelector('#qty-modal .modal').style.borderTop = '3px solid var(--return)';
+
+  errorBox.style.display  = 'none';
+  controls.style.display  = 'block';
+  addBtn.style.display    = '';
+
+  const alreadyIn = (invReturnCart.find(c => c.id === itemId) || {}).qty || 0;
+  const maxReturn = item.qty - alreadyIn;
+
+  if (maxReturn <= 0) {
+    errorBox.innerHTML     = `All ${item.qty} already queued for return.`;
+    errorBox.style.display = 'block';
+    controls.style.display = 'none';
+    addBtn.style.display   = 'none';
+  } else {
+    qtyInput.value = 1;
+    qtyInput.max   = maxReturn;
+    availText.textContent   = `You have ${item.qty} out · max return: ${maxReturn}`;
+    availText.style.display = 'block';
+  }
+
+  document.getElementById('qty-modal').classList.add('open');
+  if (controls.style.display !== 'none') setTimeout(() => qtyInput.focus(), 80);
+}
+
+function updateInvReturnBar() {
+  const bar   = document.getElementById('inv-return-bar');
+  const total = invReturnCart.reduce((s, c) => s + c.qty, 0);
+  if (total === 0) {
+    bar.classList.remove('visible');
+  } else {
+    bar.classList.add('visible');
+    const types = invReturnCart.length;
+    document.getElementById('inv-return-bar-count').textContent =
+      `${types} item type${types !== 1 ? 's' : ''} · ${total} to return`;
+  }
+}
+
+function markInvReturnItems() {
+  document.querySelectorAll('.inv-item[data-item-id]').forEach(el => {
+    const id     = el.dataset.itemId;
+    const inCart = invReturnCart.find(c => c.id === id);
+    el.classList.toggle('in-return', !!inCart);
+    const badge = el.querySelector('.inv-qty-badge');
+    if (!badge) return;
+    const totalQty = parseInt(el.dataset.itemQty) || 0;
+    badge.textContent = inCart ? `↩ ${inCart.qty} / ${totalQty}` : `× ${totalQty}`;
+  });
+  // Also update items rendered via data-item-name (fallback for no-abbr items)
+  document.querySelectorAll('.inv-item[data-item-name]').forEach(el => {
+    const id     = el.dataset.itemAbbr || el.dataset.itemName;
+    const inCart = invReturnCart.find(c => c.id === id);
+    el.classList.toggle('in-return', !!inCart);
+    const badge = el.querySelector('.inv-qty-badge');
+    if (!badge) return;
+    const totalQty = parseInt(el.dataset.itemQty) || 0;
+    badge.textContent = inCart ? `↩ ${inCart.qty} / ${totalQty}` : `× ${totalQty}`;
+  });
+}
+
+async function submitInvReturns() {
+  if (invReturnCart.length === 0 || isSubmitting) return;
+  isSubmitting = true;
+  const btn = document.getElementById('btn-submit-inv-returns');
+  btn.disabled    = true;
+  btn.textContent = 'Submitting…';
+
+  const payload = {
+    type:  'RETURN',
+    crew:  currentCrew,
+    items: invReturnCart.map(c => ({ abbr: c.abbr, name: c.name, qty: c.qty }))
+  };
+
+  try {
+    // Prefer google.script.run for reliable error handling
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      await new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject)
+          .submitCheckout(payload);
+      });
+    } else {
+      await fetch(SHEETS_URL, {
+        method:  'POST',
+        mode:    'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
+      });
+    }
+
+    // Local backup
+    const log = JSON.parse(localStorage.getItem('dr_checkout_log') || '[]');
+    invReturnCart.forEach(c => log.push({
+      type: 'RETURN', crew: currentCrew, abbr: c.abbr, name: c.name, qty: c.qty,
+      timestamp: new Date().toLocaleString()
+    }));
+    if (log.length > 500) log.splice(0, log.length - 500);
+    localStorage.setItem('dr_checkout_log', JSON.stringify(log));
+
+    invReturnCart = [];
+    btn.disabled    = false;
+    btn.textContent = '↩ Submit Returns';
+    updateInvReturnBar();
+    loadInventory(); // refresh with updated counts
+  } catch (err) {
+    btn.disabled    = false;
+    btn.textContent = '↩ Submit Returns';
+    alert('Submit failed: ' + err.message);
+  }
+  isSubmitting = false;
+}
+
+// ────────────────────────────────────────────────────────────────
+
+async function loadInventory() {
+  const body = document.getElementById('inv-body');
+  try {
+    const res  = await fetch(`${SHEETS_URL}?crew=${currentCrew}`, { redirect: 'follow' });
+    const data = await res.json();
+
+    if (data.status !== 'ok') throw new Error(data.message || 'Script error');
+
+    const items = data.items || [];
+
+    if (items.length === 0) {
+      body.innerHTML = `
+        <div class="inv-empty">
+          <div class="inv-empty-icon">✅</div>
+          <h3>All Clear</h3>
+          <p>Crew ${currentCrew} has nothing checked out right now.</p>
+        </div>`;
+      document.getElementById('inv-total-badge').textContent = '';
+      return;
+    }
+
+    const totalQty = items.reduce((s, i) => s + i.qty, 0);
+    document.getElementById('inv-total-badge').textContent =
+      `${items.length} item type${items.length !== 1 ? 's' : ''} · ${totalQty} total units`;
+
+    body.innerHTML = `
+      <div class="inv-section-header">Currently Out — Crew ${currentCrew}</div>
+      ${items.map(item => {
+        const itemId  = item.abbr || item.name;
+        const inCart  = invReturnCart.find(c => c.id === itemId);
+        const qtyLabel = inCart ? `↩ ${inCart.qty} / ${item.qty}` : `× ${item.qty}`;
+        return `
+        <div class="inv-item${inCart ? ' in-return' : ''}"
+             data-item-abbr="${esc(item.abbr || '')}"
+             data-item-name="${esc(item.name)}"
+             data-item-qty="${item.qty}"
+             onclick="openInvReturnQtyFromEl(this)">
+          <div class="inv-item-name">
+            ${item.abbr
+              ? `<div class="inv-item-abbr">${esc(item.abbr)}</div>
+                 <div class="inv-item-fullname">${esc(item.name)}</div>`
+              : `<div class="inv-item-fullname-only">${esc(item.name)}</div>`
             }
-        }
+          </div>
+          <div class="inv-qty-badge">${qtyLabel}</div>
+        </div>`;
+      }).join('')}`;
 
-        // Create tool stacks
-        function createToolStack(tool, poolId) {
-            const pool = document.getElementById(poolId);
-            
-            if (tool.qty === 1) {
-                // Single tool, no stack needed
-                const toolDiv = document.createElement('div');
-                toolDiv.className = `draggable ${tool.class}`;
-                toolDiv.draggable = true;
-                toolDiv.textContent = `${tool.name} #1`;
-                toolDiv.dataset.toolName = tool.name;
-                toolDiv.dataset.toolNumber = '1';
-                pool.appendChild(toolDiv);
-            } else {
-                // Create stack for multiple tools
-                const stackDiv = document.createElement('div');
-                stackDiv.className = 'tool-stack';
-                stackDiv.dataset.toolName = tool.name;
-                
-                // Stack label (shows when collapsed)
-                const stackLabel = document.createElement('div');
-                stackLabel.className = `draggable ${tool.class} stack-label`;
-                stackLabel.draggable = false;
-                stackLabel.textContent = tool.name;
-                stackDiv.appendChild(stackLabel);
-                
-                // Stack count badge
-                const countBadge = document.createElement('span');
-                countBadge.className = 'stack-count';
-                countBadge.textContent = tool.qty;
-                stackLabel.appendChild(countBadge);
-                
-                // Individual tool items (hidden by default)
-                for (let i = 1; i <= tool.qty; i++) {
-                    const toolDiv = document.createElement('div');
-                    toolDiv.className = `draggable ${tool.class} tool-item`;
-                    toolDiv.draggable = true;
-                    toolDiv.textContent = `${tool.name} #${i}`;
-                    toolDiv.dataset.toolName = tool.name;
-                    toolDiv.dataset.toolNumber = i;
-                    stackDiv.appendChild(toolDiv);
-                }
-                
-                // Touch-friendly expand/collapse for iOS
-                function toggleStack(e) {
-                    if (!e.target.classList.contains('tool-item')) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        stackDiv.classList.toggle('expanded');
-                        if (stackDiv.classList.contains('expanded')) {
-                            expandedStacks.add(tool.name);
-                        } else {
-                            expandedStacks.delete(tool.name);
-                        }
-                        updateStackCount(stackDiv);
-                    }
-                }
-                
-                // Add both touch and click events for iOS compatibility
-                stackDiv.addEventListener('click', toggleStack);
-                stackDiv.addEventListener('touchend', function(e) {
-                    if (!e.target.classList.contains('tool-item')) {
-                        e.preventDefault();
-                        toggleStack(e);
-                    }
-                });
-                
-                pool.appendChild(stackDiv);
-            }
-        }
+  } catch (err) {
+    body.innerHTML = `
+      <div class="inv-error">
+        <div style="font-size:36px;margin-bottom:12px;">⚠️</div>
+        <strong>Could not load data</strong><br><br>
+        ${esc(err.message)}<br><br>
+        <button class="btn-inv-back" onclick="loadInventory()">Retry</button>
+      </div>`;
+    document.getElementById('inv-total-badge').textContent = '';
+  }
+}
 
-        function updateStackCount(stackDiv) {
-            const availableCount = stackDiv.querySelectorAll('.tool-item:not(.checked-out)').length;
-            const countBadge = stackDiv.querySelector('.stack-count');
-            if (countBadge) {
-                countBadge.textContent = availableCount;
-                if (availableCount === 0) {
-                    stackDiv.style.display = 'none';
-                } else {
-                    stackDiv.style.display = '';
-                }
-            }
-        }
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('catalog-search').value = '';
+  updateTabUI();
+  renderCatalog();
+}
 
-        // Initialize inventory
-        function initializeInventory() {
-            // Clear pools first
-            const pools = ['hammersPool', 'driversPool', 'measuringPool', 'cuttingPool', 
-                          'pliersPool', 'batteriesPool', 'powerPool', 'safetyPool', 'miscPool'];
-            pools.forEach(poolId => {
-                document.getElementById(poolId).innerHTML = '';
-            });
-            
-            // Create tool stacks for each category
-            Object.entries(toolInventory).forEach(([category, tools]) => {
-                const poolId = category + 'Pool';
-                tools.forEach(tool => {
-                    createToolStack(tool, poolId);
-                });
-            });
-            
-            // Setup drag events
-            setupDragEvents();
-        }
+function updateTabUI() {
+  ['cage','yard','container'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === currentTab);
+  });
+}
 
-        // Create crew cards
-        function createCrewCards() {
-            const crewsContainer = document.getElementById('crewsContainer');
-            crewsContainer.innerHTML = '';
-            
-            for (let i = 1; i <= 8; i++) {
-                const crewCard = document.createElement('div');
-                crewCard.className = `crew-card crew-${i > 6 ? i - 6 : i}`;
-                crewCard.innerHTML = `
-                    <div class="crew-header">Crew ${i}</div>
-                    <div class="crew-body">
-                        <div class="crew-section">
-                            <div class="crew-section-title">Checked Out Tools</div>
-                            <div class="drop-zone" data-crew="${i}"></div>
-                        </div>
-                    </div>
-                `;
-                crewsContainer.appendChild(crewCard);
-            }
-        }
+async function fetchCrewInventory() {
+  const res  = await fetch(`${SHEETS_URL}?crew=${currentCrew}`, { redirect: 'follow' });
+  const data = await res.json();
+  if (data.status !== 'ok') throw new Error(data.message || 'Script error');
+  const inv = {};
+  (data.items || []).forEach(item => { inv[item.name] = item.qty; });
+  return inv;
+}
 
-        // Setup drag events
-        function setupDragEvents() {
-            document.querySelectorAll('.draggable').forEach(element => {
-                element.addEventListener('dragstart', handleDragStart);
-                element.addEventListener('dragend', handleDragEnd);
-            });
-        }
+function changeCrew() {
+  if (cart.length > 0) {
+    if (!confirm(`You have ${cart.length} item(s) in your list. Change crew and discard?`)) return;
+  }
+  cart = [];
+  currentCrew = null;
+  currentMode = 'checkout';
+  showScreen('screen-crew');
+}
 
-        // Drag handlers
-        function handleDragStart(e) {
-            if (e.target.classList.contains('draggable') && !e.target.classList.contains('stack-label')) {
-                draggedElement = e.target;
-                e.target.classList.add('dragging');
-                e.dataTransfer.effectAllowed = 'move';
-            }
-        }
+// ══════════════════════════════════════════════════════════
+//  CATALOG RENDER
+// ══════════════════════════════════════════════════════════
+function renderCatalog() {
+  const q = (document.getElementById('catalog-search').value || '').trim().toLowerCase();
+  let list = [...getTabItems()];
+  if (q) {
+    list = list.filter(t =>
+      (t.abbr || '').toLowerCase().includes(q) ||
+      t.name.toLowerCase().includes(q)
+    );
+  }
+  list.sort((a, b) => {
+    const ka = a.abbr || a.name;
+    const kb = b.abbr || b.name;
+    return ka.localeCompare(kb);
+  });
 
-        function handleDragEnd(e) {
-            if (e.target.classList.contains('draggable')) {
-                e.target.classList.remove('dragging');
-            }
-        }
+  const grid  = document.getElementById('tool-grid');
+  const empty = document.getElementById('catalog-empty');
 
-        // Setup global drag events
-        document.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        });
+  if (list.length === 0) {
+    grid.innerHTML = '';
+    empty.classList.add('visible');
+    return;
+  }
+  empty.classList.remove('visible');
 
-        document.addEventListener('dragenter', (e) => {
-            if (e.target.classList.contains('drop-zone') || e.target.classList.contains('resource-items')) {
-                e.target.classList.add('drag-over');
-            }
-        });
+  const cartIds = new Set(cart.map(c => c.id));
+  const icon = currentTab === 'yard' ? '🌿' : currentTab === 'container' ? '📦' : '🔧';
 
-        document.addEventListener('dragleave', (e) => {
-            if (e.target.classList.contains('drop-zone') || e.target.classList.contains('resource-items')) {
-                e.target.classList.remove('drag-over');
-            }
-        });
+  grid.innerHTML = list.map(t => {
+    const inCart = cartIds.has(t.id);
+    const dot    = inCart ? '<span class="in-cart-dot" title="In cart"></span>' : '';
+    const imgSrc = getItemImg(t.name);
+    return `
+      <div class="tool-card" onclick="openQtyModal('${esc(t.id)}')">
+        <div class="card-img-wrap">
+          ${imgSrc
+            ? `<img class="card-img" src="${imgSrc}" alt="${esc(t.name)}" loading="lazy">`
+            : `<div class="card-img-placeholder">${icon}</div>`
+          }
+          <div class="card-img-btns">
+            <button class="card-img-btn" onclick="event.stopPropagation();openImgSearch('${esc(t.id)}')" title="Search image">🔍</button>
+            <button class="card-img-btn" onclick="event.stopPropagation();openImgEdit('${esc(t.id)}')" title="Set image">✏️</button>
+          </div>
+        </div>
+        <div class="card-body">
+          ${t.abbr
+            ? `<div class="abbr-tag">${esc(t.abbr)}${dot}</div>
+               <div class="full-name">${esc(t.name)}</div>`
+            : `<div class="full-name-only">${esc(t.name)}${dot}</div>`
+          }
+        </div>
+      </div>`;
+  }).join('');
+}
 
-        document.addEventListener('drop', (e) => {
-            e.preventDefault();
-            
-            let dropZone = e.target;
-            
-            if (!dropZone.classList.contains('drop-zone') && !dropZone.classList.contains('resource-items')) {
-                dropZone = e.target.closest('.drop-zone') || e.target.closest('.resource-items');
-            }
-            
-            if (dropZone && draggedElement) {
-                dropZone.classList.remove('drag-over');
-                
-                // If checking out to a crew
-                if (dropZone.dataset.crew) {
-                    const time = new Date().toLocaleTimeString('en-US', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
-                    
-                    // Add checkout time and return button
-                    const wrapper = document.createElement('div');
-                    wrapper.style.width = '100%';
-                    wrapper.innerHTML = `
-                        <span class="return-btn" onclick="returnTool(this)">Return</span>
-                        ${draggedElement.textContent}
-                        <span class="checkout-time">${time}</span>
-                    `;
-                    
-                    draggedElement.classList.add('checked-out');
-                    draggedElement.style.display = 'none';
-                    draggedElement.dataset.checkoutTime = time;
-                    draggedElement.dataset.crew = dropZone.dataset.crew;
-                    
-                    wrapper.dataset.originalTool = draggedElement.dataset.toolName;
-                    wrapper.dataset.toolNumber = draggedElement.dataset.toolNumber;
-                    
-                    dropZone.appendChild(wrapper);
-                    
-                    // Update stack count if part of a stack
-                    const stack = draggedElement.closest('.tool-stack');
-                    if (stack) {
-                        updateStackCount(stack);
-                    }
-                }
-                // If moving to broken pool
-                else if (dropZone.id === 'brokenPool') {
-                    draggedElement.classList.add('broken');
-                    dropZone.appendChild(draggedElement);
-                }
-                // Return to pool
-                else if (dropZone.classList.contains('resource-items')) {
-                    draggedElement.classList.remove('broken');
-                    dropZone.appendChild(draggedElement);
-                }
-                
-                updateLastModifiedTime();
-            }
-        });
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
 
-        // Return individual tool
-        function returnTool(btn) {
-            const wrapper = btn.parentElement;
-            const toolName = wrapper.dataset.originalTool;
-            const toolNumber = wrapper.dataset.toolNumber;
-            
-            // Find the original tool element
-            const originalTool = document.querySelector(`.draggable[data-tool-name="${toolName}"][data-tool-number="${toolNumber}"]`);
-            if (originalTool) {
-                originalTool.classList.remove('checked-out');
-                originalTool.style.display = '';
-                delete originalTool.dataset.checkoutTime;
-                delete originalTool.dataset.crew;
-                
-                // Update stack count
-                const stack = originalTool.closest('.tool-stack');
-                if (stack) {
-                    updateStackCount(stack);
-                }
-            }
-            
-            wrapper.remove();
-            updateLastModifiedTime();
-        }
+// ══════════════════════════════════════════════════════════
+//  IMAGE STORE (shared via Google Sheets)
+// ══════════════════════════════════════════════════════════
+let imageMap = {};  // { 'item name lowercase': 'data:image/jpeg;base64,...' }
 
-        // Return all tools
-        function returnAllTools() {
-            if (confirm('Return all checked out tools?')) {
-                document.querySelectorAll('.return-btn').forEach(btn => {
-                    returnTool(btn);
-                });
-            }
-        }
+function loadImages() {
+  if (!SHEETS_URL) return;
+  fetch(SHEETS_URL + '?action=images')
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        imageMap = data.images || {};
+        renderCatalog();
+      }
+    })
+    .catch(() => {}); // fail silently — images just won't show
+}
 
-        // Clear all checkouts
-        function clearAllCheckouts() {
-            if (confirm('Clear all tool checkouts and reset?')) {
-                initializeInventory();
-                createCrewCards();
-                updateLastModifiedTime();
-            }
-        }
+function getItemImg(name) {
+  return imageMap[name.toLowerCase()] || null;
+}
 
-        // Toggle expand all stacks
-        function toggleExpandAll() {
-            const stacks = document.querySelectorAll('.tool-stack');
-            const shouldExpand = !document.querySelector('.tool-stack.expanded');
-            
-            stacks.forEach(stack => {
-                if (shouldExpand) {
-                    stack.classList.add('expanded');
-                } else {
-                    stack.classList.remove('expanded');
-                }
-            });
-        }
+let imgEditItemId     = null;
+let pendingImgDataUrl = null;
 
-        // Modal functions
-        function showAddModal() {
-            document.getElementById('addModal').style.display = 'block';
-        }
+function openImgSearch(id) {
+  const t = findItemById(id);
+  if (!t) return;
+  window.open('https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(t.name), '_blank');
+}
 
-        function closeAddModal() {
-            document.getElementById('addModal').style.display = 'none';
-            document.getElementById('toolName').value = '';
-            document.getElementById('toolQuantity').value = '1';
-        }
+function openImgEdit(id) {
+  imgEditItemId     = id;
+  pendingImgDataUrl = null;
+  const t = findItemById(id);
+  if (!t) return;
+  document.getElementById('img-edit-name').textContent = t.name;
+  document.getElementById('img-edit-file').value       = '';
+  document.getElementById('img-edit-status').textContent = '';
+  const current = getItemImg(t.name);
+  document.getElementById('img-edit-preview').innerHTML = current
+    ? `<img src="${current}" alt="current" style="width:100%;height:120px;object-fit:cover;border-radius:8px;display:block;">`
+    : '';
+  document.getElementById('img-edit-modal').classList.add('open');
+}
 
-        function addNewTool() {
-            const name = document.getElementById('toolName').value.trim();
-            const category = document.getElementById('toolCategory').value;
-            const qty = parseInt(document.getElementById('toolQuantity').value);
-            
-            if (!name) {
-                alert('Please enter a tool name');
-                return;
-            }
-            
-            // Determine the class based on category
-            const classMap = {
-                'hammers': 'hammer',
-                'drivers': 'screwdriver',
-                'measuring': 'measuring',
-                'cutting': 'cutting',
-                'pliers': 'pliers',
-                'batteries': 'battery',
-                'power': 'power-tool',
-                'safety': 'safety',
-                'misc': 'misc'
-            };
-            
-            const newTool = {
-                name: name,
-                qty: qty,
-                class: classMap[category] || 'misc'
-            };
-            
-            // Add to inventory
-            if (!toolInventory[category]) {
-                toolInventory[category] = [];
-            }
-            toolInventory[category].push(newTool);
-            
-            // Create the tool stack
-            createToolStack(newTool, category + 'Pool');
-            setupDragEvents();
-            
-            closeAddModal();
-            updateLastModifiedTime();
-            saveSchedule();
-        }
+function closeImgEdit() {
+  imgEditItemId     = null;
+  pendingImgDataUrl = null;
+  document.getElementById('img-edit-modal').classList.remove('open');
+}
 
-        // Save and load functions
-        function saveSchedule() {
-            const schedule = {
-                date: new Date().toISOString(),
-                lastUpdate: new Date().toLocaleString(),
-                inventory: toolInventory,
-                checkouts: [],
-                broken: []
-            };
-            
-            // Save checkouts
-            document.querySelectorAll('.drop-zone[data-crew]').forEach(zone => {
-                const crew = zone.dataset.crew;
-                const tools = Array.from(zone.children).map(wrapper => ({
-                    tool: wrapper.dataset.originalTool,
-                    number: wrapper.dataset.toolNumber,
-                    crew: crew,
-                    time: wrapper.querySelector('.checkout-time')?.textContent
-                }));
-                if (tools.length > 0) {
-                    schedule.checkouts.push({ crew, tools });
-                }
-            });
-            
-            // Save broken items
-            const brokenPool = document.getElementById('brokenPool');
-            schedule.broken = Array.from(brokenPool.querySelectorAll('.draggable')).map(el => ({
-                name: el.dataset.toolName,
-                number: el.dataset.toolNumber
-            }));
-            
-            localStorage.setItem('toolCheckoutSchedule', JSON.stringify(schedule));
-            localStorage.setItem('toolCheckoutDate', new Date().toDateString());
-            
-            // Visual feedback
-            const saveBtn = document.querySelector('.btn-save');
-            const originalText = saveBtn.textContent;
-            saveBtn.textContent = '✓ Saved!';
-            saveBtn.style.background = '#4cd137';
-            setTimeout(() => {
-                saveBtn.textContent = originalText;
-                saveBtn.style.background = '#4CAF50';
-            }, 2000);
-        }
+function previewImgEdit() {
+  const file = document.getElementById('img-edit-file').files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    document.getElementById('img-edit-status').textContent = 'File too large (max 10 MB). Choose a smaller image.';
+    document.getElementById('img-edit-file').value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX    = 400;
+      const ratio  = Math.min(1, MAX / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width  * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      pendingImgDataUrl = canvas.toDataURL('image/jpeg', 0.72);
+      document.getElementById('img-edit-preview').innerHTML =
+        `<img src="${pendingImgDataUrl}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;display:block;">`;
+      const kb = Math.round(pendingImgDataUrl.length * 0.75 / 1024);
+      document.getElementById('img-edit-status').textContent = `Ready · ${kb} KB`;
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 
-        function loadSchedule() {
-            const saved = localStorage.getItem('toolCheckoutSchedule');
-            const savedDate = localStorage.getItem('toolCheckoutDate');
-            
-            loadLastUpdateTime();
-            
-            if (saved && savedDate === new Date().toDateString()) {
-                if (confirm('Load today\'s saved tool checkouts?')) {
-                    const schedule = JSON.parse(saved);
-                    
-                    if (schedule.inventory) {
-                        toolInventory = schedule.inventory;
-                    }
-                    
-                    // Reinitialize with saved data
-                    initializeInventory();
-                    createCrewCards();
-                    
-                    // Load checkouts
-                    if (schedule.checkouts) {
-                        // Implementation would restore checked out tools
-                    }
-                }
-            }
-        }
+function saveImgEdit(forceNull) {
+  if (!imgEditItemId) return;
+  const t = findItemById(imgEditItemId);
+  if (!t) return;
 
-        function printSchedule() {
-            window.print();
-        }
+  const dataUrl = (forceNull === null) ? null : pendingImgDataUrl;
+  if (forceNull !== null && !dataUrl) {
+    document.getElementById('img-edit-status').textContent = 'Choose a photo first.';
+    return;
+  }
 
-        // Initialize on load
-        window.addEventListener('load', () => {
-            initializeInventory();
-            createCrewCards();
-            loadSchedule();
-        });
+  if (typeof google === 'undefined' || !google.script || !google.script.run) {
+    document.getElementById('img-edit-status').textContent =
+      'Upload only works in the GAS-hosted version.';
+    return;
+  }
 
-        // Auto-save every 30 seconds
-        setInterval(saveSchedule, 30000);
+  const btn = document.querySelector('#img-edit-modal .btn-primary');
+  btn.disabled    = true;
+  btn.textContent = 'Saving…';
+  document.getElementById('img-edit-status').textContent = 'Saving to Google Sheets…';
 
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('addModal');
-            if (event.target == modal) {
-                closeAddModal();
-            }
-        }
-    </script>
+  google.script.run
+    .withSuccessHandler(() => {
+      if (dataUrl) imageMap[t.name.toLowerCase()] = dataUrl;
+      else         delete imageMap[t.name.toLowerCase()];
+      closeImgEdit();
+      renderCatalog();
+      btn.disabled    = false;
+      btn.textContent = 'Save';
+    })
+    .withFailureHandler(err => {
+      btn.disabled    = false;
+      btn.textContent = 'Save';
+      document.getElementById('img-edit-status').textContent = 'Error: ' + (err.message || err);
+    })
+    .saveItemImage(t.name, dataUrl);
+}
+
+// ══════════════════════════════════════════════════════════
+//  CART BADGE
+// ══════════════════════════════════════════════════════════
+function updateCartBadge() {
+  const total = cart.reduce((sum, c) => sum + c.qty, 0);
+  const isReturn = currentMode === 'return';
+  const badge = document.getElementById('header-cart-badge');
+  badge.textContent = isReturn ? `Returns: ${total}` : `Cart: ${total}`;
+  const btn = document.getElementById('btn-checkout-toolbar');
+  if (btn) {
+    btn.disabled = total === 0;
+    if (isReturn) {
+      btn.textContent  = total > 0 ? `Complete Return (${total})` : 'Complete Return';
+      btn.classList.add('return-mode');
+    } else {
+      btn.textContent  = total > 0 ? `Checkout (${total})` : 'Checkout';
+      btn.classList.remove('return-mode');
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  QTY MODAL
+// ══════════════════════════════════════════════════════════
+function openQtyModal(id) {
+  selectedTool = findItemById(id);
+  if (!selectedTool) return;
+
+  document.getElementById('qty-abbr').textContent = selectedTool.abbr || '';
+  document.getElementById('qty-name').textContent  = selectedTool.name;
+  document.querySelector('#qty-modal .modal-title').textContent =
+    currentMode === 'return' ? 'Add to Returns' : 'Add to Cart';
+
+  const errorBox   = document.getElementById('qty-error-box');
+  const controls   = document.getElementById('qty-controls');
+  const availText  = document.getElementById('qty-avail-text');
+  const addBtn     = document.getElementById('qty-add-btn');
+  const qtyInput   = document.getElementById('qty-input');
+
+  // Reset state
+  errorBox.style.display  = 'none';
+  controls.style.display  = 'block';
+  availText.style.display = 'none';
+  addBtn.style.display    = '';
+  qtyInput.max = 99;
+  qtyInput.value = 1;
+
+  if (currentMode === 'return' && inventoryLoaded) {
+    const avail      = crewInventory[selectedTool.name] || 0;
+    const alreadyIn  = (cart.find(c => c.id === selectedTool.id) || {}).qty || 0;
+    const maxReturn  = avail - alreadyIn;
+
+    if (avail === 0) {
+      errorBox.innerHTML    = `⚠️ Crew ${currentCrew} has no <strong>${esc(selectedTool.name)}</strong> currently checked out.`;
+      errorBox.style.display  = 'block';
+      controls.style.display  = 'none';
+      addBtn.style.display    = 'none';
+    } else if (maxReturn <= 0) {
+      errorBox.innerHTML    = `⚠️ All ${avail} unit${avail !== 1 ? 's' : ''} of <strong>${esc(selectedTool.name)}</strong> are already in your return list.`;
+      errorBox.style.display  = 'block';
+      controls.style.display  = 'none';
+      addBtn.style.display    = 'none';
+    } else {
+      qtyInput.max = maxReturn;
+      qtyInput.value = 1;
+      availText.textContent   = `Max returnable: ${maxReturn}`;
+      availText.style.display = 'block';
+    }
+  }
+
+  document.getElementById('qty-modal').classList.add('open');
+  if (controls.style.display !== 'none') {
+    setTimeout(() => qtyInput.focus(), 80);
+  }
+}
+
+function closeQtyModal() {
+  invReturnMode = false;
+  document.getElementById('qty-modal').classList.remove('open');
+  document.querySelector('#qty-modal .modal').style.borderTop = '';
+  document.getElementById('qty-add-btn').textContent = 'Add to Cart';
+  selectedTool = null;
+}
+
+function adjustQty(delta) {
+  const input  = document.getElementById('qty-input');
+  const maxQty = parseInt(input.max) || 99;
+  let val = parseInt(input.value) || 1;
+  val = Math.max(1, Math.min(maxQty, val + delta));
+  input.value = val;
+}
+
+function addToCart() {
+  if (!selectedTool) return;
+  const qtyInput = document.getElementById('qty-input');
+  const maxQty   = parseInt(qtyInput.max) || 99;
+  const qty      = Math.max(1, Math.min(maxQty, parseInt(qtyInput.value) || 1));
+
+  // ── Inventory-screen return path ──────────────────────────────
+  if (invReturnMode) {
+    const maxQty    = selectedTool._invMaxQty || 0;
+    const alreadyIn = (invReturnCart.find(c => c.id === selectedTool.id) || {}).qty || 0;
+    if (alreadyIn + qty > maxQty) return;
+    const existing = invReturnCart.find(c => c.id === selectedTool.id);
+    if (existing) { existing.qty += qty; } else {
+      invReturnCart.push({ id: selectedTool.id, abbr: selectedTool.abbr || '', name: selectedTool.name, qty });
+    }
+    closeQtyModal();
+    updateInvReturnBar();
+    markInvReturnItems();
+    return;
+  }
+  // ─────────────────────────────────────────────────────────────
+
+  // Return-mode hard validation
+  if (currentMode === 'return' && inventoryLoaded) {
+    const avail     = crewInventory[selectedTool.name] || 0;
+    const alreadyIn = (cart.find(c => c.id === selectedTool.id) || {}).qty || 0;
+    if (avail === 0) {
+      document.getElementById('qty-error-box').innerHTML =
+        `⚠️ Crew ${currentCrew} has no <strong>${esc(selectedTool.name)}</strong> checked out.`;
+      document.getElementById('qty-error-box').style.display = 'block';
+      document.getElementById('qty-controls').style.display  = 'none';
+      document.getElementById('qty-add-btn').style.display   = 'none';
+      return;
+    }
+    if (alreadyIn + qty > avail) {
+      document.getElementById('qty-input').value = Math.max(1, avail - alreadyIn);
+      return;
+    }
+  }
+
+  // If item already in cart, add to its quantity
+  const existing = cart.find(c => c.id === selectedTool.id);
+  if (existing) {
+    existing.qty += qty;
+  } else {
+    cart.push({ id: selectedTool.id, abbr: selectedTool.abbr || '', name: selectedTool.name, qty });
+  }
+
+  updateCartBadge();
+  closeQtyModal();
+  openDecisionModal(selectedTool.abbr, selectedTool.name, qty);
+}
+
+// ══════════════════════════════════════════════════════════
+//  DECISION MODAL (continue / checkout)
+// ══════════════════════════════════════════════════════════
+function openDecisionModal(abbr, name, qty) {
+  const isReturn = currentMode === 'return';
+  document.getElementById('recap-name').textContent = abbr ? `${abbr} — ${name}` : name;
+  document.getElementById('recap-qty').textContent  = `× ${qty}`;
+
+  const total = cart.reduce((sum, c) => sum + c.qty, 0);
+  const items = cart.length;
+  document.getElementById('cart-running').textContent =
+    `${items} item type${items !== 1 ? 's' : ''} · ${total} ${isReturn ? 'returning' : 'in cart'}`;
+
+  // Update button labels for mode
+  document.getElementById('btn-continue').textContent =
+    isReturn ? '← Add More Returns' : '← Continue Shopping';
+  document.getElementById('btn-review-cart').textContent =
+    isReturn ? '📋 Review Returns' : '📋 Review Cart';
+  const submitBtn = document.getElementById('btn-decision-submit');
+  submitBtn.textContent = isReturn ? '✓ Complete Return' : '✓ Checkout';
+  submitBtn.style.background = isReturn ? 'var(--return)' : '';
+
+  document.getElementById('decision-modal').classList.add('open');
+}
+
+function continueShopping() {
+  document.getElementById('decision-modal').classList.remove('open');
+  renderCatalog(); // re-render so green dot shows
+}
+
+// ══════════════════════════════════════════════════════════
+//  CHECKOUT
+// ══════════════════════════════════════════════════════════
+function confirmBeforeCheckout() {
+  // Close any open modal, then open the review modal as a confirmation step
+  document.getElementById('decision-modal').classList.remove('open');
+  openReviewCart();
+}
+
+let isSubmitting = false;
+
+async function initiateCheckout() {
+  if (isSubmitting || cart.length === 0) return;
+  isSubmitting = true;
+
+  document.getElementById('decision-modal').classList.remove('open');
+  document.getElementById('submitting-modal').classList.add('open');
+
+  const timestamp = new Date().toLocaleString('en-US', {
+    month: '2-digit', day: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true
+  });
+
+  const payload = {
+    type: currentMode === 'return' ? 'RETURN' : 'CHECKOUT',
+    crew: currentCrew,
+    items: cart.map(c => ({ abbr: c.abbr, name: c.name, qty: c.qty }))
+  };
+
+  let sheetsOk = true;
+
+  // Prefer google.script.run (reliable, with real error handling)
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    try {
+      await new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject)
+          .submitCheckout(payload);
+      });
+    } catch(e) {
+      sheetsOk = false;
+      console.error('GAS error:', e);
+    }
+  } else if (SHEETS_URL) {
+    // Fallback: fetch with no-cors (response unreadable, but best effort)
+    try {
+      await fetch(SHEETS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch(e) {
+      sheetsOk = false;
+      console.error('Sheets error:', e);
+    }
+  } else {
+    sheetsOk = false;
+  }
+
+  // Also save locally as backup
+  saveLocalRecord(timestamp);
+
+  document.getElementById('submitting-modal').classList.remove('open');
+  showSuccessModal(timestamp, sheetsOk);
+  isSubmitting = false;
+}
+
+function saveLocalRecord(timestamp) {
+  const RECORDS_KEY = 'dr_checkout_records';
+  let records = [];
+  try {
+    records = JSON.parse(localStorage.getItem(RECORDS_KEY) || '[]');
+  } catch(e) {}
+  records.push({ type: currentMode === 'return' ? 'RETURN' : 'CHECKOUT', timestamp, crew: currentCrew, items: [...cart] });
+  // Keep last 500 records
+  if (records.length > 500) records = records.slice(-500);
+  localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+}
+
+function showSuccessModal(timestamp, sentToSheets) {
+  const isReturn = currentMode === 'return';
+  const icon = isReturn ? '🔄' : '✅';
+  const verb = isReturn ? 'Returned!' : 'Checked Out!';
+
+  document.querySelector('#success-modal .success-icon').textContent = icon;
+  document.getElementById('success-title').textContent = `Crew ${currentCrew} — ${verb}`;
+  document.getElementById('success-subtitle').textContent =
+    sentToSheets
+      ? `${timestamp} · Saved to Google Sheets`
+      : `${timestamp} · Saved locally${SHEETS_URL ? ' (Sheets unreachable)' : ''}`;
+
+  const typeLabel = isReturn ? 'RETURN' : 'CHECKOUT';
+  const summary = document.getElementById('checkout-summary');
+  summary.innerHTML = `
+    <div class="summary-header">${typeLabel} · CREW ${currentCrew} · ${cart.length} ITEM TYPE${cart.length !== 1 ? 'S' : ''}</div>
+    ${cart.map(c => `
+      <div class="summary-row">
+        <span class="summary-tool">
+          ${c.abbr ? `<span class="summary-tool-abbr">${esc(c.abbr)}</span>` : ''}${esc(c.name)}
+        </span>
+        <span class="summary-qty">× ${c.qty}</span>
+      </div>
+    `).join('')}
+  `;
+
+  document.getElementById('success-modal').classList.add('open');
+}
+
+function doneCheckout() {
+  document.getElementById('success-modal').classList.remove('open');
+  cart = [];
+  currentCrew = null;
+  currentMode = 'checkout';
+  showScreen('screen-crew');
+}
+
+// ══════════════════════════════════════════════════════════
+//  REVIEW CART
+// ══════════════════════════════════════════════════════════
+function openReviewCart() {
+  if (cart.length === 0) return;
+  renderReviewModal();
+  document.getElementById('review-modal').classList.add('open');
+}
+
+function closeReviewModal() {
+  document.getElementById('review-modal').classList.remove('open');
+}
+
+function renderReviewModal() {
+  const isReturn = currentMode === 'return';
+  document.getElementById('review-modal-title').textContent = isReturn ? 'CONFIRM RETURN' : 'CONFIRM CHECKOUT';
+  const submitBtn = document.getElementById('review-submit-btn');
+  submitBtn.textContent = isReturn ? '✓ Confirm & Submit Return' : '✓ Confirm & Submit';
+  submitBtn.style.background = isReturn ? 'var(--return)' : 'var(--success)';
+
+  const total = cart.reduce((s, c) => s + c.qty, 0);
+  document.getElementById('review-footer-total').textContent =
+    `${cart.length} item type${cart.length !== 1 ? 's' : ''} · ${total} total`;
+
+  if (cart.length === 0) { closeReviewModal(); renderCatalog(); return; }
+
+  document.getElementById('review-modal-body').innerHTML = cart.map(c => {
+    const maxQty = (isReturn && inventoryLoaded && crewInventory[c.name])
+      ? crewInventory[c.name] : 99;
+    const availNote = (isReturn && inventoryLoaded)
+      ? `<div class="review-item-avail">Max returnable: ${crewInventory[c.name] || 0}</div>` : '';
+    return `
+      <div class="review-item">
+        <div class="review-item-info">
+          ${c.abbr
+            ? `<div class="review-item-abbr">${esc(c.abbr)}</div>
+               <div class="review-item-fullname">${esc(c.name)}</div>`
+            : `<div class="review-item-fullname-only">${esc(c.name)}</div>`
+          }
+          ${availNote}
+        </div>
+        <div class="review-qty-row">
+          <button class="review-qty-btn" onclick="adjustCartItem('${esc(c.id)}',-1,${maxQty})">−</button>
+          <span class="review-qty-num">${c.qty}</span>
+          <button class="review-qty-btn" onclick="adjustCartItem('${esc(c.id)}',1,${maxQty})">+</button>
+          <button class="review-remove" onclick="removeCartItem('${esc(c.id)}')" title="Remove">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function adjustCartItem(id, delta, maxQty) {
+  const item = cart.find(c => c.id === id);
+  if (!item) return;
+  const newQty = item.qty + delta;
+  if (newQty <= 0)      { removeCartItem(id); return; }
+  if (newQty > maxQty)  return;
+  item.qty = newQty;
+  updateCartBadge();
+  renderReviewModal();
+}
+
+function removeCartItem(id) {
+  cart = cart.filter(c => c.id !== id);
+  updateCartBadge();
+  renderCatalog();
+  if (cart.length === 0) { closeReviewModal(); return; }
+  renderReviewModal();
+}
+
+// ══════════════════════════════════════════════════════════
+//  START
+// ══════════════════════════════════════════════════════════
+init();
+</script>
 </body>
 </html>
